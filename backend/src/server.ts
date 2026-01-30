@@ -16,9 +16,10 @@ const PORT = process.env.PORT
 app.use(
   "/uploads",
   express.static(
-    path.join(process.cwd(), "uploads")
+    path.join(__dirname, "../uploads")
   )
 );
+
 
 /* ================================
    START SERVER

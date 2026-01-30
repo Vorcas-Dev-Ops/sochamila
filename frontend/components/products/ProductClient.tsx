@@ -43,38 +43,43 @@ export default function ProductClient({
   product: Product;
 }) {
   const router = useRouter();
-  const variants = product.variants || [];
+  const variants = product.variants ?? [];
 
   /* ================= COLORS ================= */
 
-  const colors = useMemo(() => {
-    return Array.from(
-      new Set(variants.map(v => v.color.toLowerCase()))
-    );
-  }, [variants]);
-
-  const [selectedColor, setSelectedColor] = useState(
-    colors[0]
+  const colors = useMemo(
+    () =>
+      Array.from(
+        new Set(variants.map(v => v.color.toLowerCase()))
+      ),
+    [variants]
   );
 
-  const [selectedSize, setSelectedSize] =
+  const [selectedColor, setSelectedColor] =
     useState<string | null>(null);
 
-  const [qty, setQty] = useState(1);
+  useEffect(() => {
+    if (!selectedColor && colors.length) {
+      setSelectedColor(colors[0]);
+    }
+  }, [colors, selectedColor]);
 
   /* ================= SIZES ================= */
 
   const sizes = useMemo(() => {
+    if (!selectedColor) return [];
     return variants
-      .filter(
-        v => v.color.toLowerCase() === selectedColor
-      )
+      .filter(v => v.color.toLowerCase() === selectedColor)
       .map(v => v.size);
   }, [variants, selectedColor]);
+
+  const [selectedSize, setSelectedSize] =
+    useState<string | null>(null);
 
   /* ================= VARIANT ================= */
 
   const selectedVariant = useMemo(() => {
+    if (!selectedColor || !selectedSize) return null;
     return variants.find(
       v =>
         v.color.toLowerCase() === selectedColor &&
@@ -85,12 +90,16 @@ export default function ProductClient({
   /* ================= IMAGES ================= */
 
   const images = useMemo(() => {
+    if (selectedVariant?.images?.length) {
+      return selectedVariant.images;
+    }
+
+    if (!selectedColor) return [];
+
     return (
-      selectedVariant?.images ||
       variants.find(
         v => v.color.toLowerCase() === selectedColor
-      )?.images ||
-      []
+      )?.images ?? []
     );
   }, [variants, selectedVariant, selectedColor]);
 
@@ -98,19 +107,25 @@ export default function ProductClient({
     useState<string | null>(null);
 
   useEffect(() => {
-    if (images.length > 0) {
+    if (images.length) {
       setActiveImage(images[0].image);
+    } else {
+      setActiveImage(null);
     }
   }, [images]);
+
+  /* ================= QUANTITY ================= */
+
+  const [qty, setQty] = useState(1);
 
   /* ================= PRICE ================= */
 
   const unitPrice =
-    selectedVariant?.price || variants[0]?.price || 0;
+    selectedVariant?.price ?? variants[0]?.price ?? 0;
 
   const totalPrice = unitPrice * qty;
 
-  /* ================= CREATE ================= */
+  /* ================= CTA ================= */
 
   const handleCreate = () => {
     if (!selectedVariant) return;
@@ -135,9 +150,7 @@ export default function ProductClient({
           {images.map((img, i) => (
             <button
               key={i}
-              onClick={() =>
-                setActiveImage(img.image)
-              }
+              onClick={() => setActiveImage(img.image)}
               className={`border rounded-md p-1 ${
                 activeImage === img.image
                   ? "ring-2 ring-black"
@@ -145,7 +158,9 @@ export default function ProductClient({
               }`}
             >
               <img
-                src={`${API_URL}/uploads/${img.image}`}
+                src={`${API_URL}/uploads/${encodeURIComponent(
+                  img.image
+                )}`}
                 className="w-20 h-20 object-cover"
                 alt=""
               />
@@ -157,7 +172,9 @@ export default function ProductClient({
         <div className="flex-1 bg-gray-100 rounded-xl flex items-center justify-center">
           {activeImage && (
             <img
-              src={`${API_URL}/uploads/${activeImage}`}
+              src={`${API_URL}/uploads/${encodeURIComponent(
+                activeImage
+              )}`}
               className="max-h-[520px] object-contain"
               alt=""
             />
@@ -167,9 +184,7 @@ export default function ProductClient({
 
       {/* ================= RIGHT ================= */}
       <div>
-        <h1 className="text-3xl font-bold">
-          {product.name}
-        </h1>
+        <h1 className="text-3xl font-bold">{product.name}</h1>
 
         <p className="text-2xl font-semibold mt-4">
           ₹{totalPrice}
@@ -177,9 +192,7 @@ export default function ProductClient({
 
         {/* QUANTITY */}
         <div className="mt-6">
-          <p className="font-medium mb-2">
-            Quantity
-          </p>
+          <p className="font-medium mb-2">Quantity</p>
           <div className="flex gap-3 items-center">
             <button
               onClick={() =>
@@ -189,9 +202,7 @@ export default function ProductClient({
             >
               −
             </button>
-            <span className="w-10 text-center">
-              {qty}
-            </span>
+            <span className="w-10 text-center">{qty}</span>
             <button
               onClick={() => setQty(q => q + 1)}
               className="border px-3 py-1 rounded"
@@ -206,7 +217,6 @@ export default function ProductClient({
           <p className="font-medium mb-2">
             Color: {selectedColor}
           </p>
-
           <div className="flex gap-3">
             {colors.map(color => (
               <button
@@ -220,9 +230,7 @@ export default function ProductClient({
                     ? "ring-2 ring-black"
                     : ""
                 }`}
-                style={{
-                  backgroundColor: color,
-                }}
+                style={{ backgroundColor: color }}
               />
             ))}
           </div>
@@ -235,9 +243,7 @@ export default function ProductClient({
             {sizes.map(size => (
               <button
                 key={size}
-                onClick={() =>
-                  setSelectedSize(size)
-                }
+                onClick={() => setSelectedSize(size)}
                 className={`px-4 py-2 border rounded-lg ${
                   selectedSize === size
                     ? "bg-black text-white"

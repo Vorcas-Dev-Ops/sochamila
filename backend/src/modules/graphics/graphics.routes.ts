@@ -1,42 +1,88 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { upload } from "../../middlewares/upload.middleware";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { roleMiddleware } from "../../middlewares/role.middleware";
 import { Role } from "@prisma/client";
-import prisma from "../../lib/prisma";
+import {
+  getGraphics,
+  getGraphicById_controller,
+  uploadGraphics,
+  deleteGraphic_controller,
+  deleteMultipleGraphics_controller,
+} from "./graphics.controller";
 
 const router = Router();
 
-/* ================= PUBLIC ================= */
+/* =========================================================
+   PUBLIC ENDPOINTS
+========================================================= */
 
-// GET /api/graphics
-router.get("/", async (_req, res) => {
-  const graphics = await prisma.graphic.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+/**
+ * GET /api/graphics
+ * @description Get all graphics
+ * @returns {Array} Array of graphics
+ * @public
+ */
+router.get("/", (req: Request, res: Response) =>
+  getGraphics(req, res)
+);
 
-  res.json(graphics);
-});
+/**
+ * GET /api/graphics/:id
+ * @description Get a specific graphic by ID
+ * @param {string} id - Graphic ID
+ * @returns {Object} Graphic object
+ * @public
+ */
+router.get("/:id", (req: Request, res: Response) =>
+  getGraphicById_controller(req, res)
+);
 
-/* ================= ADMIN ================= */
+/* =========================================================
+   ADMIN ENDPOINTS (PROTECTED)
+========================================================= */
 
-// POST /api/admin/graphics/upload
+/**
+ * POST /api/graphics/upload
+ * @description Upload multiple graphics (Admin only)
+ * @param {File[]} files - Image files to upload (max 50)
+ * @requires ADMIN role
+ * @returns {Array} Array of created graphics
+ */
 router.post(
   "/upload",
   authMiddleware,
   roleMiddleware([Role.ADMIN]),
-  upload.array("files"),
-  async (req, res) => {
-    const files = req.files as Express.Multer.File[];
+  upload.array("files", 50),
+  (req: Request, res: Response) => uploadGraphics(req, res)
+);
 
-    await prisma.graphic.createMany({
-      data: files.map((f) => ({
-        imageUrl: `/uploads/${f.filename}`,
-      })),
-    });
+/**
+ * DELETE /api/graphics/:id
+ * @description Delete a specific graphic (Admin only)
+ * @param {string} id - Graphic ID
+ * @requires ADMIN role
+ * @returns {Object} Deleted graphic object
+ */
+router.delete(
+  "/:id",
+  authMiddleware,
+  roleMiddleware([Role.ADMIN]),
+  (req: Request, res: Response) => deleteGraphic_controller(req, res)
+);
 
-    res.json({ success: true });
-  }
+/**
+ * DELETE /api/graphics/batch
+ * @description Delete multiple graphics (Admin only)
+ * @body {Object} { ids: string[] } - Array of graphic IDs (max 100)
+ * @requires ADMIN role
+ * @returns {Object} Deletion result with count
+ */
+router.delete(
+  "/batch",
+  authMiddleware,
+  roleMiddleware([Role.ADMIN]),
+  (req: Request, res: Response) => deleteMultipleGraphics_controller(req, res)
 );
 
 export default router;

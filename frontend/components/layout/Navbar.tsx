@@ -9,14 +9,6 @@ import {
   Search,
   Heart,
   ShoppingCart,
-  ArrowRight,
-  Shirt,
-  Gift,
-  Home,
-  Sticker,
-  ImageIcon,
-  Smartphone,
-  ShoppingBag,
   LogIn,
   UserPlus,
   Briefcase,
@@ -25,7 +17,8 @@ import {
 import { jwtDecode } from "jwt-decode";
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -42,183 +35,226 @@ export default function Navbar() {
     }
   }, []);
 
-  const sidebarItems = [
-    { icon: ShoppingBag, title: "Shop Designs", desc: "Discover trending artwork" },
-    { icon: Shirt, title: "Apparel", desc: "Adults & kids clothing" },
-    { icon: Sticker, title: "Accessories", desc: "Stickers & lifestyle" },
-    { icon: Home, title: "Home Decor", desc: "Decorate your space" },
-    { icon: ImageIcon, title: "Wall Art", desc: "Canvas, posters, frames" },
-    { icon: Smartphone, title: "Phone Cases", desc: "Premium protection" },
-    { icon: Gift, title: "Gifts", desc: "Perfect for every occasion" },
+  const navLinks = [
+    { name: "Create", href: "/editor" },
+    { name: "Shop", href: "/products" },
   ];
 
   return (
     <>
       {/* ================= ANNOUNCEMENT ================= */}
-      <div className="w-full bg-linear-to-r from-indigo-600 via-purple-600 to-pink-500 text-white text-center py-2 text-sm font-semibold tracking-wide">
+      <div className="w-full bg-linear-to-r from-indigo-600 via-purple-600 to-pink-500 text-white text-center py-2 text-xs sm:text-sm font-semibold tracking-wide">
         🎉 Flat 20% OFF on your first order — Use <span className="underline">SOCHA20</span>
       </div>
 
       {/* ================= NAVBAR ================= */}
-      <nav className="w-full bg-white px-5 py-4 flex items-center justify-between sticky top-0 z-50 shadow-md backdrop-blur">
+      <nav className="w-full bg-white px-4 sm:px-6 md:px-8 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-50 shadow-md backdrop-blur">
 
-        {/* ================= LEFT ================= */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setOpen(true)}
-            className="p-2 rounded-xl hover:bg-gray-100 transition hover:rotate-90"
-          >
-            <Menu size={26} />
-          </button>
+        {/* ================= LEFT - LOGO ================= */}
+        <Link href="/" className="group flex items-center gap-2 shrink-0">
+          <Image 
+            src="/PAINT.png" 
+            alt="Sochamila Logo" 
+            width={32} 
+            height={32}
+            priority
+            className="w-8 h-8 sm:w-9 sm:h-9 object-contain"
+          />
+          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold text-[#a19926] tracking-tight group-hover:tracking-wider transition-all">
+            SOCHAMILA
+          </span>
+        </Link>
 
-          <Link href="/" className="group flex items-center gap-2">
-            <Image src="/PAINT.png" alt="Sochamila" width={34} height={34} />
-            <span className="text-2xl font-extrabold text-[#a19926] tracking-tight group-hover:tracking-wider transition-all">
-              SOCHAMILA
-            </span>
-          </Link>
-        </div>
-
-        {/* ================= CENTER LINKS ================= */}
-        <div className="hidden md:flex gap-8">
-          {["Create", "Shop"].map((item) => (
+        {/* ================= CENTER - DESKTOP LINKS ================= */}
+        <div className="hidden lg:flex gap-8 items-center">
+          {navLinks.map((item) => (
             <Link
-              key={item}
-              href="/products"
+              key={item.name}
+              href={item.href}
               className="relative font-semibold text-gray-700 transition hover:text-indigo-600
               after:absolute after:left-1/2 after:-bottom-1 after:h-[3px]
               after:w-0 after:bg-linear-to-r after:from-indigo-500 after:to-purple-500
               after:rounded-full after:-translate-x-1/2 after:transition-all
               hover:after:w-10"
             >
-              {item}
+              {item.name}
             </Link>
           ))}
         </div>
 
-        {/* ================= SEARCH ================= */}
-        <div className="hidden md:flex items-center bg-gray-100 px-4 py-2 rounded-xl w-[32%]
+        {/* ================= SEARCH BAR - DESKTOP ================= */}
+        <div className="hidden md:flex items-center bg-gray-100 px-4 py-2 rounded-xl flex-1 mx-4 max-w-xs
           focus-within:ring-2 focus-within:ring-indigo-400 transition shadow-inner">
-          <Search size={18} className="text-gray-500" />
+          <Search size={18} className="text-gray-500 shrink-0" />
           <input
-            placeholder="Search products..."
-            className="ml-2 bg-transparent outline-none w-full text-gray-700"
+            placeholder="Search..."
+            className="ml-2 bg-transparent outline-none w-full text-sm text-gray-700 placeholder-gray-500"
           />
         </div>
 
-        {/* ================= RIGHT ================= */}
-        <div className="hidden md:flex items-center gap-5">
+        {/* ================= RIGHT - DESKTOP AUTH & ICONS ================= */}
+        <div className="hidden lg:flex items-center gap-3 xl:gap-5">
 
           {/* CUSTOMER AUTH - hide Login when logged in */}
           {!isLoggedIn && (
             <Link
               href="/login"
-              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition"
+              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
             >
-              <LogIn size={18} /> Login
+              <LogIn size={18} />
+              <span className="hidden xl:inline">Login</span>
             </Link>
           )}
           {isLoggedIn && (
             <Link
               href="/admin"
-              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition"
+              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
             >
-              <LayoutDashboard size={18} /> Dashboard
+              <LayoutDashboard size={18} />
+              <span className="hidden xl:inline">Dashboard</span>
             </Link>
           )}
 
+          {/* REGISTER BUTTON */}
           <Link
             href="/register"
-            className="flex items-center gap-1 px-5 py-2 rounded-xl font-semibold text-white
+            className="flex items-center gap-1 px-4 py-2 rounded-xl font-semibold text-white
             bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500
-            bg-size-[200%_200%] hover:bg-position-[100%_50%]
-            transition-all hover:shadow-lg hover:-translate-y-px"
+            hover:shadow-lg hover:-translate-y-px transition-all text-sm xl:text-base"
           >
-            <UserPlus size={18} /> Register
+            <UserPlus size={18} /> 
+            <span className="hidden xl:inline">Register</span>
           </Link>
 
           {/* VENDOR LOGIN */}
           <Link
             href="/vendor/register"
-            className="flex items-center gap-1 px-4 py-2 rounded-xl
+            className="flex items-center gap-1 px-3 xl:px-4 py-2 rounded-xl
             border border-indigo-500 text-indigo-600 font-semibold
-            hover:bg-indigo-50 transition"
+            hover:bg-indigo-50 transition text-sm xl:text-base"
           >
-            <Briefcase size={18} /> Vendor
+            <Briefcase size={18} /> 
+            <span className="hidden xl:inline">Vendor</span>
           </Link>
 
           {/* ICONS */}
-          <Heart className="cursor-pointer hover:text-red-500 hover:scale-110 transition" />
-          <ShoppingCart className="cursor-pointer hover:text-indigo-600 hover:scale-110 transition" />
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition">
+            <Heart size={20} className="hover:text-red-500 hover:scale-110 transition" />
+          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition">
+            <ShoppingCart size={20} className="hover:text-indigo-600 hover:scale-110 transition" />
+          </button>
+        </div>
+
+        {/* ================= RIGHT - TABLET & MOBILE ================= */}
+        <div className="lg:hidden flex items-center gap-2">
+          
+          {/* MOBILE SEARCH */}
+          <button
+            onClick={() => setSearchOpen(!searchOpen)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            <Search size={20} />
+          </button>
+
+          {/* MOBILE ICONS */}
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition md:block hidden">
+            <Heart size={20} />
+          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition md:block hidden">
+            <ShoppingCart size={20} />
+          </button>
+
+          {/* MOBILE MENU BUTTON */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition"
+          >
+            {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </nav>
 
-      {/* ================= SIDEBAR ================= */}
-      <div
-        className={`fixed top-0 left-0 h-full w-72 bg-[#111322] text-white z-\[999]
-        transform transition-transform duration-300 ease-out
-        ${open ? "translate-x-0" : "-translate-x-full"}`}
-      >
-        <div className="flex flex-col h-full">
-
-          {/* HEADER */}
-          <div className="flex justify-between p-5 border-b border-white/10">
-            <h2 className="text-xl font-bold">SOCHAMILA</h2>
-            <button
-              onClick={() => setOpen(false)}
-              className="p-2 rounded-lg hover:bg-white/10 transition hover:rotate-90"
-            >
-              <X />
-            </button>
-          </div>
-
-          {/* LINKS */}
-          <div className="flex-1 p-5 space-y-8">
-            {sidebarItems.map((item, i) => (
-              <div key={i} className="group cursor-pointer">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <item.icon className="text-indigo-400 group-hover:scale-110 transition" />
-                    <h3 className="text-lg font-semibold group-hover:text-indigo-300">
-                      {item.title}
-                    </h3>
-                  </div>
-                  <ArrowRight className="group-hover:translate-x-2 transition" />
-                </div>
-                <p className="text-sm text-gray-300">{item.desc}</p>
-                <hr className="border-white/10 mt-4" />
-              </div>
-            ))}
-          </div>
-
-          {/* MOBILE AUTH */}
-          <div className="p-5 border-t border-white/10 space-y-3">
-            {!isLoggedIn && (
-              <Link href="/login" className="block font-semibold">
-                Customer Login
-              </Link>
-            )}
-            {isLoggedIn && (
-              <Link href="/admin" className="block font-semibold flex items-center gap-2">
-                <LayoutDashboard size={18} /> Dashboard
-              </Link>
-            )}
-            <Link href="/register" className="block font-semibold">
-              Customer Register
-            </Link>
-            <Link href="/vendor/register" className="block text-indigo-400 font-semibold">
-              Vendor register
-            </Link>
+      {/* ================= MOBILE SEARCH BAR ================= */}
+      {searchOpen && (
+        <div className="lg:hidden bg-gray-50 px-4 py-3 border-b">
+          <div className="flex items-center bg-white px-3 py-2 rounded-lg border border-gray-300 focus-within:border-indigo-500 transition">
+            <Search size={18} className="text-gray-500" />
+            <input
+              placeholder="Search products..."
+              className="ml-2 bg-transparent outline-none w-full text-sm"
+            />
           </div>
         </div>
-      </div>
+      )}
 
-      {/* BACKDROP */}
-      {open && (
-        <div
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-\[998]"
-        />
+      {/* ================= MOBILE MENU ================= */}
+      {mobileOpen && (
+        <div className="lg:hidden bg-white border-b shadow-lg animate-in slide-in-from-top-2">
+          <div className="px-4 py-4 space-y-3">
+            
+            {/* MOBILE NAV LINKS */}
+            {navLinks.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className="block py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700 transition"
+                onClick={() => setMobileOpen(false)}
+              >
+                {item.name}
+              </Link>
+            ))}
+
+            <div className="border-t pt-3 mt-3 space-y-2">
+              
+              {/* MOBILE AUTH BUTTONS */}
+              {!isLoggedIn && (
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <LogIn size={18} /> Login
+                </Link>
+              )}
+              {isLoggedIn && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <LayoutDashboard size={18} /> Dashboard
+                </Link>
+              )}
+
+              <Link
+                href="/register"
+                className="flex items-center gap-2 py-2 px-3 rounded-lg bg-linear-to-r from-indigo-500 to-purple-500 text-white font-semibold hover:shadow-lg transition"
+                onClick={() => setMobileOpen(false)}
+              >
+                <UserPlus size={18} /> Register
+              </Link>
+
+              <Link
+                href="/vendor/register"
+                className="flex items-center gap-2 py-2 px-3 rounded-lg border border-indigo-500 text-indigo-600 font-semibold hover:bg-indigo-50 transition"
+                onClick={() => setMobileOpen(false)}
+              >
+                <Briefcase size={18} /> Vendor
+              </Link>
+            </div>
+
+            {/* MOBILE ICONS */}
+            <div className="border-t pt-3 mt-3 flex gap-4">
+              <button className="flex-1 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold flex items-center justify-center gap-2">
+                <Heart size={18} /> Wishlist
+              </button>
+              <button className="flex-1 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold flex items-center justify-center gap-2">
+                <ShoppingCart size={18} /> Cart
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -69,7 +69,7 @@ export default function DesignSection() {
   };
 
   return (
-    <section className="w-full bg-gradient-to-b from-white via-gray-50 to-white">
+    <section className="w-full bg-linear-to-b from-white via-gray-50 to-white">
       {/* ================= HERO BANNER ================= */}
       <div className="px-4 sm:px-6 md:px-12 lg:px-20 pt-8 sm:pt-12 md:pt-16 pb-8">
         <div className="flex items-center gap-2 mb-3">
@@ -126,7 +126,7 @@ export default function DesignSection() {
                 `}
               >
                 {loading ? (
-                  <div className="w-full h-full bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse" />
+                  <div className="w-full h-full bg-linear-to-r from-gray-200 to-gray-300 animate-pulse" />
                 ) : (
                   <>
                     <Image
@@ -201,7 +201,7 @@ export default function DesignSection() {
                 {/* Image Container */}
                 <div className="relative h-40 sm:h-48 md:h-56 bg-gray-50 overflow-hidden">
                   {loading ? (
-                    <div className="w-full h-full bg-gradient-to-r from-gray-200 to-gray-300 animate-pulse" />
+                    <div className="w-full h-full bg-linear-to-r from-gray-200 to-gray-300 animate-pulse" />
                   ) : (
                     <>
                       <Image
@@ -285,7 +285,7 @@ export default function DesignSection() {
         {/* Show all on mobile */}
         <Link
           href="/products"
-          className="sm:hidden flex justify-center mt-6 w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold py-3 px-6 rounded-xl transition text-center"
+          className="sm:hidden flex justify-center mt-6 w-full bg-linear-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold py-3 px-6 rounded-xl transition text-center"
         >
           View All Products <ArrowRight className="w-4 h-4 ml-2" />
         </Link>
@@ -293,7 +293,7 @@ export default function DesignSection() {
 
       {/* ================= CTA SECTION ================= */}
       <div className="px-4 sm:px-6 md:px-12 lg:px-20 py-8 sm:py-12">
-        <div className="relative bg-gradient-to-r from-teal-600 to-cyan-600 rounded-3xl p-6 sm:p-8 md:p-12 overflow-hidden">
+        <div className="relative bg-linear-to-r from-teal-600 to-cyan-600 rounded-3xl p-6 sm:p-8 md:p-12 overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full -mr-20 -mt-20" />
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full -ml-16 -mb-16" />

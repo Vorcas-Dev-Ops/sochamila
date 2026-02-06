@@ -34,15 +34,27 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   /* ================= AUTH GUARD ================= */
+  /* Require login; if no token or expired, clear and redirect to login (re-login) */
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return router.replace("/login");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
 
     try {
       const decoded = jwtDecode<JwtPayload>(token);
-      if (decoded.role !== "ADMIN") router.replace("/");
+      if (decoded.exp * 1000 < Date.now()) {
+        localStorage.removeItem("token");
+        router.replace("/login");
+        return;
+      }
+      if (decoded.role !== "ADMIN") {
+        router.replace("/");
+      }
     } catch {
+      localStorage.removeItem("token");
       router.replace("/login");
     }
   }, [router]);

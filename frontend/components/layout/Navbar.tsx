@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -20,10 +20,27 @@ import {
   LogIn,
   UserPlus,
   Briefcase,
+  LayoutDashboard,
 } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      setIsLoggedIn(false);
+      return;
+    }
+    try {
+      const decoded = jwtDecode<{ exp: number }>(token);
+      setIsLoggedIn(decoded.exp * 1000 > Date.now());
+    } catch {
+      setIsLoggedIn(false);
+    }
+  }, []);
 
   const sidebarItems = [
     { icon: ShoppingBag, title: "Shop Designs", desc: "Discover trending artwork" },
@@ -92,13 +109,23 @@ export default function Navbar() {
         {/* ================= RIGHT ================= */}
         <div className="hidden md:flex items-center gap-5">
 
-          {/* CUSTOMER AUTH */}
-          <Link
-            href="/login"
-            className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition"
-          >
-            <LogIn size={18} /> Login
-          </Link>
+          {/* CUSTOMER AUTH - hide Login when logged in */}
+          {!isLoggedIn && (
+            <Link
+              href="/login"
+              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition"
+            >
+              <LogIn size={18} /> Login
+            </Link>
+          )}
+          {isLoggedIn && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition"
+            >
+              <LayoutDashboard size={18} /> Dashboard
+            </Link>
+          )}
 
           <Link
             href="/register"
@@ -166,9 +193,16 @@ export default function Navbar() {
 
           {/* MOBILE AUTH */}
           <div className="p-5 border-t border-white/10 space-y-3">
-            <Link href="/login" className="block font-semibold">
-              Customer Login
-            </Link>
+            {!isLoggedIn && (
+              <Link href="/login" className="block font-semibold">
+                Customer Login
+              </Link>
+            )}
+            {isLoggedIn && (
+              <Link href="/admin" className="block font-semibold flex items-center gap-2">
+                <LayoutDashboard size={18} /> Dashboard
+              </Link>
+            )}
             <Link href="/register" className="block font-semibold">
               Customer Register
             </Link>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
 
@@ -12,6 +12,16 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // When user lands on login page (e.g. by clicking Back), log them out so they must log in again
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      localStorage.removeItem("token");
+    }
+    setCheckingAuth(false);
+  }, []);
 
   const handleLogin = async () => {
     if (loading) return;
@@ -49,6 +59,14 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-6">
+        <p className="text-gray-500">Checking login…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-6">

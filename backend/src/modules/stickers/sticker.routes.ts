@@ -21,6 +21,9 @@ router.post(
 // Toggle enable / disable
 router.patch("/:id/toggle", controller.toggle);
 
+// Move to category
+router.patch("/:id/category", controller.moveToCategory);
+
 // Delete sticker permanently
 router.delete("/:id", controller.remove);
 

@@ -6,7 +6,13 @@ import prisma from "../../lib/prisma";
 export const getAll = () => {
   return prisma.sticker.findMany({
     include: {
-      category: true,
+      category: {
+        include: {
+          _count: {
+            select: { stickers: true },
+          },
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -33,6 +39,15 @@ export const upload = async (
             connect: { id: categoryId }, // ✅ CORRECT PRISMA RELATION
           },
         },
+        include: {
+          category: {
+            include: {
+              _count: {
+                select: { stickers: true },
+              },
+            },
+          },
+        },
       })
     )
   );
@@ -54,6 +69,41 @@ export const toggle = async (id: string) => {
     where: { id },
     data: {
       isActive: !sticker.isActive,
+    },
+    include: {
+      category: {
+        include: {
+          _count: {
+            select: { stickers: true },
+          },
+        },
+      },
+    },
+  });
+};
+
+/* ===============================
+   MOVE TO CATEGORY
+================================ */
+export const moveToCategory = async (
+  id: string,
+  categoryId: string
+) => {
+  return prisma.sticker.update({
+    where: { id },
+    data: {
+      category: {
+        connect: { id: categoryId },
+      },
+    },
+    include: {
+      category: {
+        include: {
+          _count: {
+            select: { stickers: true },
+          },
+        },
+      },
     },
   });
 };

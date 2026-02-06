@@ -9,8 +9,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import { LayoutWrapper } from "../components/layout/LayoutWrapper";
 
 /* UI Fonts */
 const geistSans = Geist({
@@ -49,8 +48,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "My App",
-  description: "Next.js App Router Setup",
+  title: "Sochamila - Custom Design Platform",
+  description: "Create and customize products with our design editor",
 };
 
 export default function RootLayout({
@@ -71,9 +70,9 @@ export default function RootLayout({
           bg-gray-50 antialiased
         `}
       >
-        <Navbar />
-        <main className="min-h-[80vh]">{children}</main>
-        <Footer />
+        <LayoutWrapper>
+          {children}
+        </LayoutWrapper>
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -12,11 +12,28 @@ import {
   LogIn,
   UserPlus,
   Briefcase,
+  LayoutDashboard,
 } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      setIsLoggedIn(false);
+      return;
+    }
+    try {
+      const decoded = jwtDecode<{ exp: number }>(token);
+      setIsLoggedIn(decoded.exp * 1000 > Date.now());
+    } catch {
+      setIsLoggedIn(false);
+    }
+  }, []);
 
   const navLinks = [
     { name: "Create", href: "/editor" },
@@ -78,14 +95,25 @@ export default function Navbar() {
         {/* ================= RIGHT - DESKTOP AUTH & ICONS ================= */}
         <div className="hidden lg:flex items-center gap-3 xl:gap-5">
 
-          {/* CUSTOMER LOGIN */}
-          <Link
-            href="/login"
-            className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
-          >
-            <LogIn size={18} /> 
-            <span className="hidden xl:inline">Login</span>
-          </Link>
+          {/* CUSTOMER AUTH - hide Login when logged in */}
+          {!isLoggedIn && (
+            <Link
+              href="/login"
+              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
+            >
+              <LogIn size={18} />
+              <span className="hidden xl:inline">Login</span>
+            </Link>
+          )}
+          {isLoggedIn && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
+            >
+              <LayoutDashboard size={18} />
+              <span className="hidden xl:inline">Dashboard</span>
+            </Link>
+          )}
 
           {/* REGISTER BUTTON */}
           <Link
@@ -180,13 +208,24 @@ export default function Navbar() {
             <div className="border-t pt-3 mt-3 space-y-2">
               
               {/* MOBILE AUTH BUTTONS */}
-              <Link
-                href="/login"
-                className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
-                onClick={() => setMobileOpen(false)}
-              >
-                <LogIn size={18} /> Login
-              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <LogIn size={18} /> Login
+                </Link>
+              )}
+              {isLoggedIn && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <LayoutDashboard size={18} /> Dashboard
+                </Link>
+              )}
 
               <Link
                 href="/register"

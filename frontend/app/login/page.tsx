@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import api from "@/lib/axios";
 
 export default function LoginPage() {
@@ -12,6 +12,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // When user lands on login page, force logout
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      localStorage.removeItem("token");
+    }
+    setCheckingAuth(false);
+  }, []);
 
   const handleLogin = async () => {
     if (loading) return;
@@ -49,9 +59,16 @@ export default function LoginPage() {
     }
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-6">
+        <p className="text-gray-500">Checking login…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-6">
-
       {/* Back Button */}
       <div className="w-full max-w-md mb-4">
         <Link
@@ -68,7 +85,6 @@ export default function LoginPage() {
 
       {/* Login Card */}
       <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8">
-
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-extrabold text-gray-900">

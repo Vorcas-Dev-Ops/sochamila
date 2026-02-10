@@ -38,13 +38,13 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
   jersey: {
     id: "jersey",
     label: "Jersey",
-    sides: ["front", "back", "left", "right"],
+    sides: ["front", "back"],
 
     masks: {
-      front: "/masks/jersey/front.png",
-      back: "/masks/jersey/back.png",
-      left: "/masks/jersey/left.png",
-      right: "/masks/jersey/right.png",
+      front: "/masks/jersey/front.webp",
+      back: "/masks/jersey/back.webp",
+      left: "/masks/jersey/left.webp",
+      right: "/masks/jersey/right.webp",
     },
 
     printAreaRatio: {

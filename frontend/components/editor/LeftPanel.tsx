@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FONT_GROUPS } from "@/fonts/fontCatalog";
+import { FONT_GROUPS, LANGUAGE_GROUPS, type LanguageCategory, type FontGroup } from "@/fonts/fontCatalog";
 import { loadGoogleFont } from "@/utils/loadGoogleFont";
 
 import {
@@ -54,6 +54,7 @@ export default function LeftPanel({
   /* ================= LOCAL UI STATE ================= */
 
   const [text, setText] = useState("Your Text");
+  const [language, setLanguage] = useState<LanguageCategory>("Latin");
   const [fontFamily, setFontFamily] = useState("Inter");
   const [fontSize, setFontSize] = useState(48);
   const [fontWeight, setFontWeight] = useState(400);
@@ -89,7 +90,13 @@ export default function LeftPanel({
     setTextStyle(l.textStyle);
   }, [selectedLayer]);
 
-  const fonts = useMemo(() => FONT_GROUPS, []);
+  const fonts = useMemo(() => {
+    const selectedGroups = LANGUAGE_GROUPS[language];
+    return selectedGroups.reduce((acc, group) => {
+      acc[group as FontGroup] = FONT_GROUPS[group as FontGroup];
+      return acc;
+    }, {} as Record<FontGroup, readonly string[]>);
+  }, [language]);
 
   /* ================= AI HANDLER ================= */
 
@@ -144,6 +151,23 @@ export default function LeftPanel({
               onUpdateText({ text: e.target.value });
             }}
           />
+
+          <div>
+            <label className="text-xs block mb-1 font-semibold">Language</label>
+            <select
+              value={language}
+              className="w-full border rounded p-2 text-sm"
+              onChange={e => {
+                setLanguage(e.target.value as LanguageCategory);
+              }}
+            >
+              {(Object.keys(LANGUAGE_GROUPS) as LanguageCategory[]).map(lang => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <select
             value={fontFamily}

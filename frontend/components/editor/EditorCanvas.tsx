@@ -10,6 +10,7 @@ import {
   isTextLayer,
 } from "@/types/editor";
 
+import { loadGoogleFont } from "@/utils/loadGoogleFont";
 import { PRINT_PROFILES } from "@/config/printProfiles";
 
 /* ======================================================
@@ -337,20 +338,51 @@ export default function EditorCanvas({
 ====================================================== */
 
 function EnhancedText({ layer }: { layer: TextLayer }) {
+  const [fontLoaded, setFontLoaded] = useState(true);
+
+  useEffect(() => {
+    setFontLoaded(false);
+    loadGoogleFont(layer.fontFamily);
+    
+    // Force re-render after font loads to apply new font
+    const timer = setTimeout(() => {
+      setFontLoaded(true);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [layer.fontFamily]);
+
+  // Properly format the CSS font family string with quotes for multi-word fonts
+  const fontFamilyCSS = layer.fontFamily.includes(" ") 
+    ? `"${layer.fontFamily}", "Noto Sans", sans-serif`
+    : `${layer.fontFamily}, "Noto Sans", sans-serif`;
+
   const style: React.CSSProperties = {
-    fontFamily: layer.fontFamily,
+    fontFamily: fontFamilyCSS,
     fontSize: `${layer.fontSize}px`,
     fontWeight: layer.fontWeight,
+    fontStyle: layer.isItalic ? "italic" : "normal",
+    textDecoration: [
+      layer.isUnderline ? "underline" : "",
+      layer.isStrikethrough ? "line-through" : ""
+    ].filter(Boolean).join(" ") || "none",
     letterSpacing: `${layer.letterSpacing ?? 0}px`,
     lineHeight: layer.lineHeight ?? 1.2,
     textAlign: layer.textAlign || "center",
     whiteSpace: "pre-wrap",
     color: layer.color,
     opacity: layer.opacity ?? 1,
+    WebkitFontSmoothing: "antialiased",
+    MozOsxFontSmoothing: "grayscale",
   };
 
+  // Apply text style effects
   if (layer.textStyle === "shadow") {
-    style.textShadow = "3px 3px 6px rgba(0,0,0,0.4)";
+    const offsetX = layer.shadowOffsetX ?? 2;
+    const offsetY = layer.shadowOffsetY ?? 2;
+    const blur = layer.shadowBlur ?? 4;
+    const shadowCol = layer.shadowColor ?? "#000000";
+    style.textShadow = `${offsetX}px ${offsetY}px ${blur}px ${shadowCol}`;
   }
 
   if (layer.textStyle === "outline") {
@@ -364,12 +396,147 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
   }
 
   if (layer.textStyle === "3d") {
-    style.textShadow = `
-      1px 1px 0 #222,
-      2px 2px 0 #333,
-      3px 3px 0 #444
-    `;
+    const depth = layer.depth3d ?? 5;
+    const angle = (layer.angle3d ?? 45) * Math.PI / 180;
+    const offsetX = Math.round(Math.cos(angle) * depth);
+    const offsetY = Math.round(Math.sin(angle) * depth);
+    const shadowCol = layer.shadowColor ?? "#222";
+    
+    let shadows = [];
+    for (let i = 1; i <= depth; i++) {
+      shadows.push(`${i}px ${i}px 0 rgba(0,0,0,${0.3 * (i/depth)})`);
+    }
+    style.textShadow = shadows.join(", ");
   }
 
-  return <div style={style}>{layer.text}</div>;
+  if (layer.textStyle === "glow") {
+    const glowCol = layer.glowColor ?? "#FF00FF";
+    const glowSz = layer.glowSize ?? 5;
+    style.textShadow = `0 0 ${glowSz}px ${glowCol}, 0 0 ${glowSz * 2}px ${glowCol}`;
+    style.color = "#fff";
+  }
+
+  if (layer.textStyle === "emboss") {
+    style.textShadow = `
+      -2px -2px 2px rgba(255,255,255,0.5),
+       2px  2px 2px rgba(0,0,0,0.5)
+    `;
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "neon") {
+    const glowCol = layer.glowColor ?? "#FF00FF";
+    style.textShadow = `
+      0 0 10px ${glowCol},
+      0 0 20px ${glowCol},
+      0 0 30px ${glowCol}
+    `;
+    style.color = "#fff";
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "gradient") {
+    const startCol = layer.gradientStart ?? "#FF0000";
+    const endCol = layer.gradientEnd ?? "#0000FF";
+    const angle = layer.gradientAngle ?? 0;
+    
+    style.backgroundImage = `linear-gradient(${angle}deg, ${startCol}, ${endCol})`;
+    style.backgroundClip = "text";
+    style.WebkitBackgroundClip = "text";
+    style.WebkitTextFillColor = "transparent";
+    style.color = "transparent" as any;
+  }
+
+  if (layer.textStyle === "chrome") {
+    style.backgroundImage = "linear-gradient(45deg, #C0C0C0, #E8E8E8, #C0C0C0, #E8E8E8)";
+    style.backgroundClip = "text";
+    style.WebkitBackgroundClip = "text";
+    style.WebkitTextFillColor = "transparent";
+    style.textShadow = "2px 2px 4px rgba(0,0,0,0.3)";
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "glass") {
+    style.color = "rgba(255,255,255,0.8)";
+    style.textShadow = `
+      0 0 20px rgba(255,255,255,0.5),
+      inset 0 0 20px rgba(255,255,255,0.2)
+    `;
+    style.backdropFilter = "blur(10px)" as any;
+    style.fontWeight = 300;
+    style.letterSpacing = "2px";
+  }
+
+  if (layer.textStyle === "fire") {
+    const glowCol1 = "#FF0000";
+    const glowCol2 = "#FF7F00";
+    style.color = "#FFF";
+    style.textShadow = `
+      0 0 10px ${glowCol1},
+      0 0 20px ${glowCol1},
+      0 0 30px ${glowCol2},
+      0 0 40px ${glowCol2}
+    `;
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "wave") {
+    style.textShadow = `
+      0 2px 0 #999,
+      0 4px 0 #888,
+      0 6px 0 #777,
+      0 8px 0 #666,
+      0 10px 0 #555,
+      0 12px 15px rgba(0,0,0,0.5)
+    `;
+    style.color = layer.color;
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "blur") {
+    style.filter = "blur(1px)";
+    style.textShadow = "0 0 10px rgba(0,0,0,0.3)";
+    style.opacity = 0.85;
+  }
+
+  if (layer.textStyle === "marble") {
+    style.backgroundImage = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)";
+    style.backgroundClip = "text";
+    style.WebkitBackgroundClip = "text";
+    style.WebkitTextFillColor = "transparent";
+    style.textShadow = "2px 2px 8px rgba(0,0,0,0.2)";
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "plasma") {
+    const glowCol = "#FF00FF";
+    style.color = "#00FFFF";
+    style.textShadow = `
+      0 0 5px #00FFFF,
+      0 0 10px ${glowCol},
+      0 0 15px #00FF00,
+      0 0 20px #FF00FF,
+      0 0 30px #00FFFF
+    `;
+    style.fontWeight = 700;
+    style.letterSpacing = "2px";
+  }
+
+  if (layer.textStyle === "hologram") {
+    style.color = "#0FF";
+    style.textShadow = `
+      0 0 10px #0FF,
+      0 0 20px #0FF,
+      -2px -2px 5px #FF00FF,
+      2px 2px 5px #FF00FF
+    `;
+    style.fontWeight = 500;
+    style.letterSpacing = "3px";
+  }
+
+  return (
+    <div style={style} key={`${layer.fontFamily}-${fontLoaded}`}>
+      {layer.text}
+    </div>
+  );
 }

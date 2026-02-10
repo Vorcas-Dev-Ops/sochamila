@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FONT_GROUPS, LANGUAGE_GROUPS, type LanguageCategory, type FontGroup } from "@/fonts/fontCatalog";
+import { FONT_GROUPS, type FontGroup } from "@/fonts/fontCatalog";
 import { loadGoogleFont } from "@/utils/loadGoogleFont";
+
 
 import {
   EditorLayer,
@@ -54,7 +55,6 @@ export default function LeftPanel({
   /* ================= LOCAL UI STATE ================= */
 
   const [text, setText] = useState("Your Text");
-  const [language, setLanguage] = useState<LanguageCategory>("Latin");
   const [fontFamily, setFontFamily] = useState("Inter");
   const [fontSize, setFontSize] = useState(48);
   const [fontWeight, setFontWeight] = useState(400);
@@ -63,6 +63,30 @@ export default function LeftPanel({
   const [color, setColor] = useState("#111827");
   const [opacity, setOpacity] = useState(1);
   const [textStyle, setTextStyle] = useState<TextStyle>("normal");
+  
+  // Text decorations
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrikethrough, setIsStrikethrough] = useState(false);
+  
+  // Shadow effects
+  const [shadowColor, setShadowColor] = useState("#000000");
+  const [shadowOffsetX, setShadowOffsetX] = useState(2);
+  const [shadowOffsetY, setShadowOffsetY] = useState(2);
+  const [shadowBlur, setShadowBlur] = useState(4);
+  
+  // 3D effects
+  const [depth3d, setDepth3d] = useState(5);
+  const [angle3d, setAngle3d] = useState(45);
+  
+  // Glow effects
+  const [glowColor, setGlowColor] = useState("#FF00FF");
+  const [glowSize, setGlowSize] = useState(5);
+  
+  // Gradient text
+  const [gradientStart, setGradientStart] = useState("#FF0000");
+  const [gradientEnd, setGradientEnd] = useState("#0000FF");
+  const [gradientAngle, setGradientAngle] = useState(0);
 
   /* ================= AI STATE ================= */
 
@@ -91,12 +115,8 @@ export default function LeftPanel({
   }, [selectedLayer]);
 
   const fonts = useMemo(() => {
-    const selectedGroups = LANGUAGE_GROUPS[language];
-    return selectedGroups.reduce((acc, group) => {
-      acc[group as FontGroup] = FONT_GROUPS[group as FontGroup];
-      return acc;
-    }, {} as Record<FontGroup, readonly string[]>);
-  }, [language]);
+    return FONT_GROUPS;
+  }, []);
 
   /* ================= AI HANDLER ================= */
 
@@ -147,45 +167,33 @@ export default function LeftPanel({
             value={text}
             className="w-full border rounded p-2 text-sm"
             onChange={e => {
-              setText(e.target.value);
-              onUpdateText({ text: e.target.value });
+              const inputText = e.target.value;
+              setText(inputText);
+              onUpdateText({ text: inputText });
             }}
           />
 
+
           <div>
-            <label className="text-xs block mb-1 font-semibold">Language</label>
+            <label className="text-xs block mb-1 font-semibold">Font Family</label>
             <select
-              value={language}
+              value={fontFamily}
               className="w-full border rounded p-2 text-sm"
               onChange={e => {
-                setLanguage(e.target.value as LanguageCategory);
+                loadGoogleFont(e.target.value);
+                setFontFamily(e.target.value);
+                onUpdateText({ fontFamily: e.target.value });
               }}
             >
-              {(Object.keys(LANGUAGE_GROUPS) as LanguageCategory[]).map(lang => (
-                <option key={lang} value={lang}>
-                  {lang}
-                </option>
+              {Object.entries(fonts).map(([g, list]) => (
+                <optgroup key={g} label={g}>
+                  {list.map(f => (
+                    <option key={f}>{f}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
-
-          <select
-            value={fontFamily}
-            className="w-full border rounded p-2 text-sm"
-            onChange={e => {
-              loadGoogleFont(e.target.value);
-              setFontFamily(e.target.value);
-              onUpdateText({ fontFamily: e.target.value });
-            }}
-          >
-            {Object.entries(fonts).map(([g, list]) => (
-              <optgroup key={g} label={g}>
-                {list.map(f => (
-                  <option key={f}>{f}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
 
           <Range label="Font Size" min={12} max={200} value={fontSize}
             onChange={v => {
@@ -232,24 +240,194 @@ export default function LeftPanel({
             />
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
-            {(["normal", "shadow", "outline", "3d"] as TextStyle[]).map(s => (
+          {/* Text Decorations */}
+          <div className="space-y-2">
+            <label className="text-xs block font-semibold">Text Decorations</label>
+            <div className="flex gap-2">
               <button
-                key={s}
                 onClick={() => {
-                  setTextStyle(s);
-                  onUpdateText({ textStyle: s });
+                  setIsItalic(!isItalic);
+                  onUpdateText({ isItalic: !isItalic });
                 }}
-                className={`py-2 text-xs rounded ${
-                  textStyle === s
-                    ? "bg-black text-white"
-                    : "border"
+                className={`flex-1 py-2 text-xs rounded font-italic ${
+                  isItalic ? "bg-indigo-600 text-white" : "border"
                 }`}
+                title="Italic"
               >
-                {s.toUpperCase()}
+                <em>Italic</em>
               </button>
-            ))}
+              <button
+                onClick={() => {
+                  setIsUnderline(!isUnderline);
+                  onUpdateText({ isUnderline: !isUnderline });
+                }}
+                className={`flex-1 py-2 text-xs rounded ${
+                  isUnderline ? "bg-indigo-600 text-white" : "border"
+                }`}
+                title="Underline"
+              >
+                <u>Under</u>
+              </button>
+              <button
+                onClick={() => {
+                  setIsStrikethrough(!isStrikethrough);
+                  onUpdateText({ isStrikethrough: !isStrikethrough });
+                }}
+                className={`flex-1 py-2 text-xs rounded ${
+                  isStrikethrough ? "bg-indigo-600 text-white" : "border"
+                }`}
+                title="Strikethrough"
+              >
+                <s>Strike</s>
+              </button>
+            </div>
           </div>
+
+          {/* Text Styles */}
+          <div className="space-y-2">
+            <label className="text-xs block font-semibold">Text Style</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["normal", "shadow", "outline", "3d", "glow", "emboss", "neon", "gradient", "chrome", "glass", "fire", "wave", "blur", "marble", "plasma", "hologram"] as TextStyle[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    setTextStyle(s);
+                    onUpdateText({ textStyle: s });
+                  }}
+                  className={`py-2 px-1 text-xs rounded font-semibold transition whitespace-nowrap overflow-hidden ${
+                    textStyle === s
+                      ? "bg-indigo-600 text-white"
+                      : "border hover:bg-gray-50"
+                  }`}
+                  title={s}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Shadow Controls - shown when shadow or 3d style */}
+          {(textStyle === "shadow" || textStyle === "3d") && (
+            <div className="space-y-3 border-t pt-3 mt-3">
+              <label className="text-xs block font-semibold">Shadow Effects</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={shadowColor}
+                  onChange={e => {
+                    setShadowColor(e.target.value);
+                    onUpdateText({ shadowColor: e.target.value });
+                  }}
+                  className="w-12 h-8 rounded cursor-pointer"
+                  title="Shadow color"
+                />
+                <span className="text-xs text-gray-600">Color</span>
+              </div>
+              <Range label="Offset X" min={-10} max={10} value={shadowOffsetX}
+                onChange={v => {
+                  setShadowOffsetX(v);
+                  onUpdateText({ shadowOffsetX: v });
+                }}
+              />
+              <Range label="Offset Y" min={-10} max={10} value={shadowOffsetY}
+                onChange={v => {
+                  setShadowOffsetY(v);
+                  onUpdateText({ shadowOffsetY: v });
+                }}
+              />
+              <Range label="Blur" min={0} max={20} value={shadowBlur}
+                onChange={v => {
+                  setShadowBlur(v);
+                  onUpdateText({ shadowBlur: v });
+                }}
+              />
+            </div>
+          )}
+
+          {/* 3D Controls - shown when 3d style */}
+          {textStyle === "3d" && (
+            <div className="space-y-3 border-t pt-3">
+              <label className="text-xs block font-semibold">3D Effects</label>
+              <Range label="Depth" min={0} max={50} value={depth3d}
+                onChange={v => {
+                  setDepth3d(v);
+                  onUpdateText({ depth3d: v });
+                }}
+              />
+              <Range label="Angle" min={0} max={360} step={15} value={angle3d}
+                onChange={v => {
+                  setAngle3d(v);
+                  onUpdateText({ angle3d: v });
+                }}
+              />
+            </div>
+          )}
+
+          {/* Glow Controls - shown when glow style */}
+          {textStyle === "glow" && (
+            <div className="space-y-3 border-t pt-3">
+              <label className="text-xs block font-semibold">Glow Effects</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={glowColor}
+                  onChange={e => {
+                    setGlowColor(e.target.value);
+                    onUpdateText({ glowColor: e.target.value });
+                  }}
+                  className="w-12 h-8 rounded cursor-pointer"
+                  title="Glow color"
+                />
+                <span className="text-xs text-gray-600">Glow Color</span>
+              </div>
+              <Range label="Glow Size" min={0} max={20} value={glowSize}
+                onChange={v => {
+                  setGlowSize(v);
+                  onUpdateText({ glowSize: v });
+                }}
+              />
+            </div>
+          )}
+
+          {/* Gradient Controls - shown when gradient style */}
+          {textStyle === "gradient" && (
+            <div className="space-y-3 border-t pt-3">
+              <label className="text-xs block font-semibold">Gradient Effects</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={gradientStart}
+                  onChange={e => {
+                    setGradientStart(e.target.value);
+                    onUpdateText({ gradientStart: e.target.value });
+                  }}
+                  className="w-12 h-8 rounded cursor-pointer"
+                  title="Gradient start"
+                />
+                <span className="text-xs text-gray-600">Start</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={gradientEnd}
+                  onChange={e => {
+                    setGradientEnd(e.target.value);
+                    onUpdateText({ gradientEnd: e.target.value });
+                  }}
+                  className="w-12 h-8 rounded cursor-pointer"
+                  title="Gradient end"
+                />
+                <span className="text-xs text-gray-600">End</span>
+              </div>
+              <Range label="Angle" min={0} max={360} step={15} value={gradientAngle}
+                onChange={v => {
+                  setGradientAngle(v);
+                  onUpdateText({ gradientAngle: v });
+                }}
+              />
+            </div>
+          )}
 
           {selectedLayer && selectedLayer.type === "text" && (
             <div className="space-y-3 border-t pt-4">

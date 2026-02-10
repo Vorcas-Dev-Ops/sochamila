@@ -54,7 +54,7 @@ export type LayerType = "text" | "image" | "sticker";
 ========================================================= */
 
 export type TextAlign = "left" | "center" | "right";
-export type TextStyle = "normal" | "shadow" | "outline" | "3d";
+export type TextStyle = "normal" | "shadow" | "outline" | "3d" | "glow" | "emboss" | "neon" | "gradient" | "chrome" | "glass" | "fire" | "wave" | "blur";
 
 export interface TextLayer extends BaseLayer {
   readonly type: "text";
@@ -67,6 +67,9 @@ export interface TextLayer extends BaseLayer {
   fontFamily: string;
   fontWeight: number;
   color: string;
+  isItalic?: boolean;
+  isUnderline?: boolean;
+  isStrikethrough?: boolean;
 
   /* ---------- Layout ---------- */
   textAlign: TextAlign;
@@ -76,6 +79,25 @@ export interface TextLayer extends BaseLayer {
   /* ---------- Effects ---------- */
   textStyle: TextStyle;
   curve: number; // -180 → 180 (SVG arc / warp)
+  
+  /* ---------- Shadow Effects ---------- */
+  shadowColor?: string;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  shadowBlur?: number;
+  
+  /* ---------- 3D Effects ---------- */
+  depth3d?: number; // 0 → 50
+  angle3d?: number; // 0 → 360
+  
+  /* ---------- Glow Effects ---------- */
+  glowColor?: string;
+  glowSize?: number; // 0 → 20
+  
+  /* ---------- Gradient Text ---------- */
+  gradientStart?: string;
+  gradientEnd?: string;
+  gradientAngle?: number;
 }
 
 /* =========================================================

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 
 import {
@@ -95,19 +95,23 @@ function resolveProductImage(
    COMPONENT
 ====================================================== */
 
-export default function EditorCanvas({
-  product,
-  side,
-  selectedColor,
-  layers,
-  selectedLayerId,
-  setSelectedLayerId,
-  updateLayer,
-  deleteLayer,
-}: EditorCanvasProps) {
+const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
+  function EditorCanvas({
+    product,
+    side,
+    selectedColor,
+    layers,
+    selectedLayerId,
+    setSelectedLayerId,
+    updateLayer,
+    deleteLayer,
+  }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] =
     useState(CANVAS_SIZE);
+
+  /* ================= FORWARD REF ================= */
+  useImperativeHandle(ref, () => containerRef.current as HTMLDivElement);
 
   /* ================= DELETE KEY ================= */
 
@@ -331,7 +335,10 @@ export default function EditorCanvas({
       </div>
     </div>
   );
-}
+  }
+);
+
+export default EditorCanvas;
 
 /* ======================================================
    TEXT
@@ -499,7 +506,7 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
     style.opacity = 0.85;
   }
 
-  if (layer.textStyle === "marble") {
+  if (layer.textStyle && String(layer.textStyle) === "marble") {
     style.backgroundImage = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)";
     style.backgroundClip = "text";
     style.WebkitBackgroundClip = "text";
@@ -508,7 +515,7 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
     style.fontWeight = 700;
   }
 
-  if (layer.textStyle === "plasma") {
+  if (layer.textStyle && String(layer.textStyle) === "plasma") {
     const glowCol = "#FF00FF";
     style.color = "#00FFFF";
     style.textShadow = `
@@ -522,7 +529,7 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
     style.letterSpacing = "2px";
   }
 
-  if (layer.textStyle === "hologram") {
+  if (layer.textStyle && String(layer.textStyle) === "hologram") {
     style.color = "#0FF";
     style.textShadow = `
       0 0 10px #0FF,

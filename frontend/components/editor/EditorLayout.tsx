@@ -1,9 +1,12 @@
+
 "use client";
+import React from "react";
 
 import { useCallback, useMemo, useState } from "react";
 import { nanoid } from "nanoid";
 
 import EditorCanvas from "./EditorCanvas";
+import html2canvas from "html2canvas";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
 
@@ -39,6 +42,7 @@ export default function EditorLayout({
     images?: ProductVariantImage[];
   };
 }) {
+  const canvasRef = React.useRef<HTMLDivElement>(null);
   const [layers, setLayers] = useState<EditorLayer[]>([]);
   const [activeSide, setActiveSide] = useState<Side>("front");
   const [selectedLayerId, setSelectedLayerId] =
@@ -214,7 +218,119 @@ export default function EditorLayout({
     setSelectedLayerId(null);
   }, []);
 
-  /* ================= UI ================= */
+  /* ================= PREVIEW ================= */
+
+  // Function to capture all sides as images
+  const getPreviewImages = async (): Promise<Record<Side, string | null>> => {
+    const sides: Side[] = ["front", "back", "left", "right"];
+    const previews: Record<Side, string | null> = {
+      front: null,
+      back: null,
+      left: null,
+      right: null,
+    };
+
+    console.log("📷 getPreviewImages called, canvasRef:", canvasRef.current);
+
+    // Helper to wait for images to load in element
+    const waitForImages = async (element: HTMLElement | null, timeout = 2000) => {
+      if (!element) return;
+      const images = element.querySelectorAll("img");
+      const count = images.length;
+      if (!count) {
+        console.log("✓ No product images to wait for");
+        return;
+      }
+      
+      console.log(`⏳ Waiting for ${count} image(s) to load...`);
+
+      const promises = Array.from(images).map(
+        (img, idx) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) {
+              console.log(`  ✓ Image ${idx + 1}/${count} already complete`);
+              resolve();
+            } else {
+              img.onload = () => {
+                console.log(`  ✓ Image ${idx + 1}/${count} loaded`);
+                resolve();
+              };
+              img.onerror = () => {
+                console.log(`  ⚠ Image ${idx + 1}/${count} failed to load`);
+                resolve();
+              };
+              setTimeout(() => {
+                console.log(`  ⚠ Image ${idx + 1}/${count} timeout`);
+                resolve();
+              }, timeout);
+            }
+          })
+      );
+
+      await Promise.all(promises);
+      console.log("✓ All images ready");
+    };
+
+    try {
+      for (const side of sides) {
+        console.log(`\n🔄 Capturing ${side} side...`);
+        
+        // Switch to this side
+        setActiveSide(side);
+        
+        // Wait for the canvas to re-render and images to load
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await waitForImages(canvasRef.current);
+
+        if (!canvasRef.current) {
+          console.warn(`  ⚠ Canvas ref is null for ${side}`);
+          continue;
+        }
+
+        try {
+          const element = canvasRef.current;
+          console.log(`  📐 Capturing element:`, {
+            tag: element.tagName,
+            width: element.offsetWidth,
+            height: element.offsetHeight,
+            hasChildren: element.children.length,
+          });
+
+          const canvas = await html2canvas(element, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            imageTimeout: 5000,
+            logging: false,
+          });
+          
+          const dataUrl = canvas.toDataURL("image/png");
+          previews[side] = dataUrl;
+          
+          console.log(`  ✅ Successfully captured ${side} (${dataUrl.length} bytes)`);
+        } catch (err) {
+          console.error(`  ❌ Failed to capture ${side}:`, err);
+          previews[side] = null;
+        }
+      }
+    } catch (err) {
+      console.error("❌ Preview capture error:", err);
+    }
+
+    // Switch back to front side
+    console.log("\n↩️  Switching back to front side");
+    setActiveSide("front");
+
+    console.log("📊 Final previews:", {
+      front: previews.front ? `${previews.front.length} bytes` : "null",
+      back: previews.back ? `${previews.back.length} bytes` : "null",
+      left: previews.left ? `${previews.left.length} bytes` : "null",
+      right: previews.right ? `${previews.right.length} bytes` : "null",
+    });
+
+    return previews;
+  };
 
   return (
     <div className="h-screen flex bg-[#f4f5f7] overflow-hidden relative">
@@ -228,6 +344,7 @@ export default function EditorLayout({
       />
 
       <EditorCanvas
+        ref={canvasRef}
         product={{
           type: product.type,
           images: editorImages,
@@ -249,6 +366,7 @@ export default function EditorLayout({
         setActiveSide={setActiveSide}
         layerCount={layers.length}
         selectedLayerId={selectedLayerId}
+        getPreviewImages={getPreviewImages}
       />
     </div>
   );

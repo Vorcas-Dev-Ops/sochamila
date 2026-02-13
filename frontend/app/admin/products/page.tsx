@@ -116,7 +116,23 @@ export default function AdminProductsPage() {
       await api.delete(`/admin/products/${id}`);
       setProducts(prev => prev.filter(p => p.id !== id));
     } catch (err) {
-      console.error("DELETE PRODUCT ERROR:", err);
+      const msg = (err as any)?.response?.data?.message || "Failed to delete product";
+      // If deletion is blocked because of existing orders, offer to hide the product instead
+      if (msg.toLowerCase().includes("associated orders")) {
+        const doHide = confirm(msg + "\n\nHide this product instead?");
+        if (doHide) {
+          try {
+            await api.patch(`/admin/products/${id}/status`, { isActive: false });
+            setProducts(prev => prev.map(p => p.id === id ? { ...p, isActive: false } : p));
+            alert("Product hidden (deactivated)");
+          } catch (hideErr) {
+            alert("Failed to hide product");
+          }
+        }
+        return;
+      }
+
+      alert(msg);
     }
   }, []);
 

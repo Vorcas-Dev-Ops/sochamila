@@ -36,29 +36,53 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.remove = exports.update = exports.create = exports.getAll = void 0;
 const CategoryService = __importStar(require("./category.service"));
 const getAll = async (_req, res) => {
-    const categories = await CategoryService.getAll();
-    res.json(categories);
+    try {
+        const categories = await CategoryService.getAll();
+        res.json(categories);
+    }
+    catch (error) {
+        console.error("Get categories error:", error);
+        res.status(500).json({ message: "Failed to get categories" });
+    }
 };
 exports.getAll = getAll;
 const create = async (req, res) => {
-    const { name } = req.body;
-    if (!name) {
-        return res.status(400).json({ message: "Category name is required" });
+    try {
+        const { name } = req.body;
+        if (!name) {
+            return res.status(400).json({ message: "Category name is required" });
+        }
+        const category = await CategoryService.create(name);
+        res.status(201).json(category);
     }
-    const category = await CategoryService.create(name);
-    res.status(201).json(category);
+    catch (error) {
+        console.error("Create category error:", error);
+        res.status(500).json({ message: "Failed to create category" });
+    }
 };
 exports.create = create;
 const update = async (req, res) => {
-    const { id } = req.params;
-    const { name } = req.body;
-    const category = await CategoryService.update(id, name);
-    res.json(category);
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        const { name } = req.body;
+        const category = await CategoryService.update(id, name);
+        res.json(category);
+    }
+    catch (error) {
+        console.error("Update category error:", error);
+        res.status(500).json({ message: "Failed to update category" });
+    }
 };
 exports.update = update;
 const remove = async (req, res) => {
-    const { id } = req.params;
-    await CategoryService.remove(id);
-    res.json({ success: true });
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        await CategoryService.remove(id);
+        res.json({ success: true });
+    }
+    catch (error) {
+        console.error("Delete category error:", error);
+        res.status(500).json({ message: "Failed to delete category" });
+    }
 };
 exports.remove = remove;

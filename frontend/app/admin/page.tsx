@@ -9,6 +9,9 @@ import {
   Users,
   TrendingUp,
   RefreshCcw,
+  CheckCircle,
+  Clock,
+  ArrowRight,
 } from "lucide-react";
 
 /* ================= TYPES ================= */
@@ -20,26 +23,56 @@ interface DashboardStats {
   revenue: number;
 }
 
+interface Vendor {
+  id: string;
+  name: string;
+  email: string;
+  kycStatus?: string;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
 /* ================= PAGE ================= */
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  /* ================= LOAD STATS ================= */
+  /* ================= LOAD DATA ================= */
 
-  const loadStats = async () => {
+  const loadData = async () => {
     try {
       setError("");
       setRefreshing(true);
 
-      const res = await api.get("/admin/stats");
-      setStats(res.data);
-    } catch (err) {
-      console.error("Dashboard stats error:", err);
-      setError("Failed to load dashboard statistics");
+      const [statsRes, vendorsRes] = await Promise.all([
+        api.get("/admin/stats"),
+        api.get("/admin/vendors"),
+      ]);
+
+      setStats(statsRes.data?.data || statsRes.data);
+      setVendors(Array.isArray(vendorsRes.data?.data) ? vendorsRes.data.data : []);
+    } catch (err: any) {
+      console.error("Dashboard error:", err);
+      
+      if (err?.response?.status === 403) {
+        setError("You don't have permission to view this data. Please ensure you're logged in as an admin.");
+      } else if (err?.response?.status === 401) {
+        setError("Your session has expired. Please log in again.");
+      } else {
+        setError("Failed to load dashboard data");
+      }
+      
+      // Set default stats to prevent crash
+      setStats({
+        products: 0,
+        orders: 0,
+        vendors: 0,
+        revenue: 0,
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -47,11 +80,16 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    loadStats();
+    loadData();
 
-    const interval = setInterval(loadStats, 15000);
+    const interval = setInterval(loadData, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  /* ================= VENDOR STATS ================= */
+
+  const pendingVendors = vendors.filter(v => !v.kycStatus || v.kycStatus === "PENDING");
+  const approvedVendors = vendors.filter(v => v.kycStatus === "APPROVED");
 
   /* ================= UI ================= */
 
@@ -65,12 +103,12 @@ export default function AdminDashboardPage() {
             Admin Dashboard
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Overview of store performance & activity
+            System overview & vendor management
           </p>
         </div>
 
         <button
-          onClick={loadStats}
+          onClick={loadData}
           disabled={refreshing}
           className="
             flex items-center gap-2 px-4 py-2 rounded-lg border
@@ -92,7 +130,7 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* ================= STATS ================= */}
+      {/* ================= KEY METRICS ================= */}
       <section>
         <h2 className="text-lg font-semibold mb-4">
           Key Metrics
@@ -116,7 +154,7 @@ export default function AdminDashboardPage() {
           />
 
           <StatCard
-            title="Vendors"
+            title="Total Vendors"
             value={stats?.vendors}
             loading={loading}
             icon={<Users size={22} />}
@@ -135,6 +173,105 @@ export default function AdminDashboardPage() {
             color="blue"
           />
         </div>
+      </section>
+
+      {/* ================= VENDOR OVERVIEW ================= */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">
+            Vendor Management
+          </h2>
+          <Link href="/admin/vendors" className="text-indigo-600 text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all">
+            View All <ArrowRight size={16} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="bg-white rounded-xl p-6 border-l-4 border-yellow-500">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Pending Approval</p>
+                <h3 className="text-3xl font-bold mt-2">{pendingVendors.length}</h3>
+                <p className="text-xs text-gray-400 mt-1">Awaiting KYC review</p>
+              </div>
+              <div className="p-3 bg-yellow-100 rounded-lg text-yellow-600">
+                <Clock size={22} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border-l-4 border-green-500">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Approved Vendors</p>
+                <h3 className="text-3xl font-bold mt-2">{approvedVendors.length}</h3>
+                <p className="text-xs text-gray-400 mt-1">Active sellers</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-lg text-green-600">
+                <CheckCircle size={22} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border-l-4 border-blue-500">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Approval Rate</p>
+                <h3 className="text-3xl font-bold mt-2">{vendors.length > 0 ? Math.round((approvedVendors.length / vendors.length) * 100) : 0}%</h3>
+                <p className="text-xs text-gray-400 mt-1">Of all vendors</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
+                <TrendingUp size={22} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* VENDOR LIST */}
+        {vendors.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="p-6 border-b">
+              <h3 className="font-semibold">Recent Vendors (Latest {Math.min(10, vendors.length)})</h3>
+            </div>
+
+            <div className="divide-y">
+              {vendors.slice(0, 10).map(vendor => (
+                <div key={vendor.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition">
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{vendor.name}</div>
+                    <div className="text-xs text-gray-500">{vendor.email}</div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      vendor.kycStatus === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                      vendor.kycStatus === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {vendor.kycStatus || 'PENDING'}
+                    </span>
+
+                    {vendor.kycStatus === 'APPROVED' ? (
+                      <Link href={`/admin/vendors/${vendor.id}`} className="text-indigo-600 text-xs font-medium hover:underline">
+                        View
+                      </Link>
+                    ) : (
+                      <span className="text-xs text-gray-400">N/A</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {vendors.length > 10 && (
+              <div className="p-4 text-center border-t bg-gray-50">
+                <Link href="/admin/vendors" className="text-indigo-600 text-sm font-medium hover:underline">
+                  View all {vendors.length} vendors →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* ================= QUICK ACTIONS ================= */}
@@ -161,25 +298,6 @@ export default function AdminDashboardPage() {
             description="View and process customer orders"
             href="/admin/orders"
           />
-        </div>
-      </section>
-
-      {/* ================= RECENT ACTIVITY ================= */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4">
-          Recent Activity
-        </h2>
-
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <p className="text-sm text-gray-500">
-            Recent orders, vendor actions and system events
-            will appear here.
-          </p>
-
-          {/* Placeholder for future */}
-          <div className="mt-4 text-sm text-gray-400">
-            No recent activity yet
-          </div>
         </div>
       </section>
     </div>

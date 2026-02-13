@@ -1,74 +1,57 @@
 import { Request, Response } from "express";
 import * as productService from "./product.service";
+import { asyncHandler } from "../../utils/asyncHandler";
+import { sendSuccess, sendError } from "../../utils/response";
 
 /* ======================================================
    GET ALL SHOP PRODUCTS
 ====================================================== */
 
-export const getProducts = async (
-  _req: Request,
-  res: Response
-) => {
-  try {
-    const products = await productService.getAllPublicProducts();
+export const getProducts = asyncHandler(async (req: Request, res: Response) => {
+  // Pagination (query params: page, limit) - default values
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
 
-    return res.status(200).json({
-      success: true,
-      message: "Products fetched successfully",
-      data: products,
-    });
-  } catch (error) {
+  try {
+    const result = await productService.getAllPublicProducts(page, limit);
+
+    // Return array in `data` for compatibility with frontend
+    return sendSuccess(res, "Products fetched successfully", result.items);
+  } catch (error: any) {
     console.error("PUBLIC PRODUCTS ERROR:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch products",
-      data: null,
-    });
+    if (error.message && error.message.includes("Can't reach database")) {
+      return sendError(res, "Database unavailable", 503);
+    }
+
+    return sendError(res, "Failed to fetch products", 500);
   }
-};
+});
 
 /* ======================================================
    GET SINGLE PRODUCT BY ID
 ====================================================== */
 
-export const getProductById = async (
-  req: Request,
-  res: Response
-) => {
+export const getProductById = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id?.trim();
+
+  if (!id) {
+    return sendError(res, "Product ID is required", 400);
+  }
+
   try {
-    const id = req.params.id?.trim();
-
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: "Product ID is required",
-        data: null,
-      });
-    }
-
     const product = await productService.getPublicProductById(id);
 
     if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-        data: null,
-      });
+      return sendError(res, "Product not found", 404);
     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Product fetched successfully",
-      data: product,
-    });
-  } catch (error) {
+    return sendSuccess(res, "Product fetched successfully", product);
+  } catch (error: any) {
     console.error("PUBLIC PRODUCT ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch product",
-      data: null,
-    });
+    if (error.message && error.message.includes("Can't reach database")) {
+      return sendError(res, "Database unavailable", 503);
+    }
+    return sendError(res, "Failed to fetch product", 500);
   }
-};
+});

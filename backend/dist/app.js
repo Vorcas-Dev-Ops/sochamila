@@ -3,11 +3,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+console.log("[APP] Starting app initialization...");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const path_1 = __importDefault(require("path"));
 const routes_1 = __importDefault(require("./routes"));
+const logger_1 = require("./middlewares/logger");
+const errorHandler_1 = require("./middlewares/errorHandler");
 const app = (0, express_1.default)();
+/* ================================
+   REQUEST TRACKING
+================================ */
+app.use(logger_1.requestIdMiddleware);
+app.use(logger_1.httpLogger);
+app.use((0, logger_1.performanceWarning)(1000)); // Warn if request takes > 1 second
 /* ================================
    CORS
 ================================ */
@@ -20,14 +29,19 @@ app.use((0, cors_1.default)({
 /* ================================
    BODY PARSERS
 ================================ */
-app.use(express_1.default.json());
-app.use(express_1.default.urlencoded({ extended: true }));
+app.use(express_1.default.json({ limit: "10mb" }));
+app.use(express_1.default.urlencoded({ extended: true, limit: "10mb" }));
 /* ================================
-   STATIC FILES (FIXED ✅)
+   STATIC FILES
 ================================ */
 app.use("/uploads", express_1.default.static(path_1.default.join(__dirname, "../uploads")));
 /* ================================
    API ROUTES
 ================================ */
 app.use("/api", routes_1.default);
+/* ================================
+   ERROR HANDLING (MUST BE LAST)
+================================ */
+app.use(errorHandler_1.notFoundHandler);
+app.use(errorHandler_1.globalErrorHandler);
 exports.default = app;

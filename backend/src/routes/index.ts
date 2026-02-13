@@ -1,15 +1,56 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import adminRoutes from "../admin/admin.routes";
 import productRoutes from "../modules/products/product.routes";
+import authRoutes from "../modules/auth/auth.routes";
 import graphicsRoutes from "../modules/graphics/graphics.routes";
+import stickerRoutes from "../modules/stickers/sticker.routes";
+import categoryRoutes from "../modules/stickers/category.routes";
+import vendorRoutes from "../modules/vendor/vendor.routes";
+import customerRoutes from "../modules/customer/customer.routes";
+import orderRoutes from "../modules/orders/order.routes";
 
-
+console.log("[ROUTES-INDEX] Starting route initialization...");
+console.log("[ROUTES-INDEX] vendorRoutes import successful:", vendorRoutes);
 
 const router = Router();
 
+console.log("[ROUTES-INDEX] Mounting authentication routes...");
+router.use("/auth", authRoutes);
+
+console.log("[ROUTES-INDEX] Mounting admin routes...");
 router.use("/admin", adminRoutes);
+
+console.log("[ROUTES-INDEX] Mounting product routes...");
 router.use("/products", productRoutes); // PUBLIC PRODUCTS
+
+console.log("[ROUTES-INDEX] Mounting graphics routes...");
 router.use("/graphics", graphicsRoutes);
 
+console.log("[ROUTES-INDEX] Mounting sticker routes...");
+router.use("/stickers", stickerRoutes);
+router.use("/sticker-categories", categoryRoutes);
+
+console.log("[ROUTES-INDEX] Mounting vendor routes...");
+router.use("/vendor", vendorRoutes);
+
+// Add a catch-all middleware for vendor requests to see if they're hitting this
+router.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.includes("vendor")) {
+    console.log("[ROUTES-INDEX] Caught vendor request:", {
+      path: req.path,
+      method: req.method,
+      originalUrl: req.originalUrl,
+    });
+  }
+  next();
+});
+
+console.log("[ROUTES-INDEX] Mounting customer routes...");
+router.use("/customer", customerRoutes);
+
+console.log("[ROUTES-INDEX] Mounting order routes...");
+router.use("/orders", orderRoutes);
+
+console.log("[ROUTES-INDEX] All routes mounted successfully!");
 
 export default router;

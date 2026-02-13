@@ -4,72 +4,45 @@ import {
   loginUserService,
   checkEmailExistsService,
 } from "./auth.service";
+import { asyncHandler } from "../../utils/asyncHandler";
+import { registerSchema, loginSchema, checkEmailSchema } from "../../utils/validators";
+import { sendSuccess, sendError } from "../../utils/response";
 
 /* =====================================================
    REGISTER USER
 ===================================================== */
 
-export const registerUser = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
-  try {
-    const { name, email, password } = req.body;
+export const registerUser = asyncHandler(async (req: Request, res: Response) => {
+  const validated = registerSchema.parse(req.body);
 
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        message: "Name, email and password are required",
-      });
-    }
+  const { token, user } = await registerUserService(validated as any);
 
-    const { token, user } = await registerUserService({
-      name,
-      email,
-      password,
-    });
-
-    return res.status(201).json({
-      message: "Registration successful",
+  return sendSuccess(
+    res,
+    "Registration successful",
+    {
       token,
       user: {
         id: user.id,
         email: user.email,
         role: user.role,
       },
-    });
-  } catch (error: any) {
-    console.error("REGISTER ERROR:", error);
-
-    return res.status(400).json({
-      message: error.message || "Registration failed",
-    });
-  }
-};
+    },
+    201
+  );
+});
 
 /* =====================================================
    LOGIN USER (ADMIN / CUSTOMER / VENDOR)
 ===================================================== */
 
-export const loginUser = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
+export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const validated = loginSchema.parse(req.body);
 
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required",
-      });
-    }
+    const { token, user } = await loginUserService(validated.email, validated.password);
 
-    const { token, user } = await loginUserService(
-      email,
-      password
-    );
-
-    return res.status(200).json({
-      message: "Login successful",
+    return sendSuccess(res, "Login successful", {
       token,
       user: {
         id: user.id,
@@ -78,42 +51,19 @@ export const loginUser = async (
       },
     });
   } catch (error: any) {
-    console.error("LOGIN ERROR:", error);
-
-    return res.status(401).json({
-      message: error.message || "Invalid credentials",
-    });
+    console.error("Login error:", error.message);
+    throw error;
   }
-};
+});
 
 /* =====================================================
    CHECK EMAIL EXISTS (AJAX)
    Used during registration
 ===================================================== */
 
-export const checkEmailExists = async (
-  req: Request,
-  res: Response
-): Promise<Response> => {
-  try {
-    const { email } = req.body;
+export const checkEmailExists = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = checkEmailSchema.parse(req.body);
 
-    if (!email) {
-      return res.status(400).json({
-        message: "Email is required",
-      });
-    }
-
-    const exists = await checkEmailExistsService(email);
-
-    return res.status(200).json({
-      exists,
-    });
-  } catch (error) {
-    console.error("CHECK EMAIL ERROR:", error);
-
-    return res.status(500).json({
-      message: "Server error",
-    });
-  }
-};
+  const exists = await checkEmailExistsService(email);
+  return sendSuccess(res, "Email check completed", { exists });
+});

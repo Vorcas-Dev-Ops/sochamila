@@ -47,6 +47,8 @@ router.post("/upload", upload_middleware_1.upload.array("files", 20), // 🔥 RE
 controller.upload);
 // Toggle enable / disable
 router.patch("/:id/toggle", controller.toggle);
+// Move to category
+router.patch("/:id/category", controller.moveToCategory);
 // Delete sticker permanently
 router.delete("/:id", controller.remove);
 exports.default = router;

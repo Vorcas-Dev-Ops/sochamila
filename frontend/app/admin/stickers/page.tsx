@@ -338,8 +338,15 @@ export default function AdminStickersPage() {
           {/* CATEGORY LIST */}
           <div className="mt-3 flex flex-wrap gap-2">
             {categories.map((c) => (
-              <button
+              <div
                 key={c.id}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setSelectedCategoryId(c.id);
+                  }
+                }}
                 onClick={() => setSelectedCategoryId(c.id)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${
                   selectedCategoryId === c.id
@@ -357,10 +364,11 @@ export default function AdminStickersPage() {
                     deleteCategory(c.id);
                   }}
                   className="ml-1 text-gray-400 hover:text-red-600 transition-colors"
+                  aria-label={`Delete category ${c.name}`}
                 >
                   <X size={14} />
                 </button>
-              </button>
+              </div>
             ))}
           </div>
         </div>

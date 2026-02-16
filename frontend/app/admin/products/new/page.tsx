@@ -24,9 +24,89 @@ type ColorVariant = {
    CONSTANTS
 ====================================================== */
 
-const AUDIENCES = ["MEN", "WOMEN", "KIDS", "ACCESSORIES"];
+const AUDIENCES = ["MEN", "WOMEN", "KIDS"];
+const PRODUCT_CATEGORIES = ["REGULAR", "GEAR", "ACCESSORIES"];
 const PRODUCT_TYPES = ["TSHIRT", "SHIRT", "HOODIE", "SWEATSHIRT", "CAP"];
-const COLORS = ["Black", "White", "Red", "Blue", "Green", "Yellow"];
+
+// Comprehensive color palette with hex values
+const COLORS = [
+  // Reds
+  { name: "Red", hex: "#EF4444" },
+  { name: "Crimson", hex: "#DC2626" },
+  { name: "Maroon", hex: "#7F1D1D" },
+  { name: "Dark Red", hex: "#991B1B" },
+  { name: "Deep Red", hex: "#5A1515" },
+  
+  // Pinks
+  { name: "Hot Pink", hex: "#EC4899" },
+  { name: "Pink", hex: "#EC4899" },
+  { name: "Light Pink", hex: "#FBB6CE" },
+  { name: "Rose", hex: "#F43F5E" },
+  
+  // Purples
+  { name: "Magenta", hex: "#D946EF" },
+  { name: "Purple", hex: "#A855F7" },
+  { name: "Dark Purple", hex: "#6B21A8" },
+  { name: "Indigo", hex: "#4F46E5" },
+  { name: "Lavender", hex: "#E9D5FF" },
+  { name: "Light Purple", hex: "#DDD6FE" },
+  
+  // Blues  
+  { name: "Light Blue", hex: "#93C5FD" },
+  { name: "Sky Blue", hex: "#38BDF8" },
+  { name: "Blue", hex: "#3B82F6" },
+  { name: "Dark Blue", hex: "#1E40AF" },
+  { name: "Navy", hex: "#001F3F" },
+  { name: "Cobalt", hex: "#0338EE" },
+  
+  // Cyans/Teals
+  { name: "Cyan", hex: "#06B6D4" },
+  { name: "Teal", hex: "#14B8A6" },
+  { name: "Dark Teal", hex: "#0D9488" },
+  { name: "Turquoise", hex: "#20C997" },
+  { name: "Light Cyan", hex: "#A5F3FC" },
+  
+  // Greens
+  { name: "Lime", hex: "#84CC16" },
+  { name: "Green", hex: "#22C55E" },
+  { name: "Dark Green", hex: "#166534" },
+  { name: "Forest Green", hex: "#15803D" },
+  { name: "Olive", hex: "#6B7280" },
+  { name: "Light Green", hex: "#BBF7D0" },
+  { name: "Sea Green", hex: "#20B2AA" },
+  
+  // Yellows/Golds
+  { name: "Yellow", hex: "#EAB308" },
+  { name: "Gold", hex: "#FBBF24" },
+  { name: "Light Yellow", hex: "#FEFCE8" },
+  { name: "Amber", hex: "#FCD34D" },
+  
+  // Oranges
+  { name: "Orange", hex: "#FB923C" },
+  { name: "Dark Orange", hex: "#EA580C" },
+  { name: "Rust", hex: "#CC5500" },
+  
+  // Browns/Tans
+  { name: "Tan", hex: "#D2B48C" },
+  { name: "Beige", hex: "#F5F5DC" },
+  { name: "Brown", hex: "#92400E" },
+  { name: "Dark Brown", hex: "#5A3A1A" },
+  { name: "Chocolate", hex: "#6B3410" },
+  { name: "Khaki", hex: "#C3B091" },
+  
+  // Grays
+  { name: "Light Gray", hex: "#D1D5DB" },
+  { name: "Gray", hex: "#9CA3AF" },
+  { name: "Dark Gray", hex: "#4B5563" },
+  { name: "Charcoal", hex: "#36454F" },
+  { name: "Slate", hex: "#64748B" },
+  
+  // Neutrals
+  { name: "White", hex: "#FFFFFF" },
+  { name: "Black", hex: "#000000" },
+  { name: "Off-White", hex: "#F9FAFB" },
+];
+
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
 /* ======================================================
@@ -47,6 +127,7 @@ export default function AddProductPage() {
     description: "",
     audience: "",
     productType: "",
+    productCategory: "REGULAR",
   });
 
   const [colors, setColors] = useState<ColorVariant[]>([
@@ -162,6 +243,7 @@ export default function AddProductPage() {
       form.append("description", product.description);
       form.append("audience", product.audience);
       form.append("productType", product.productType);
+      form.append("productCategory", product.productCategory);
 
       // REQUIRED BY BACKEND
       form.append("productImageCount", images.length.toString());
@@ -261,7 +343,7 @@ export default function AddProductPage() {
       </section>
 
       {/* ORGANIZATION */}
-      <section className="bg-white border rounded-2xl p-8 grid grid-cols-2 gap-6">
+      <section className="bg-white border rounded-2xl p-8 grid grid-cols-3 gap-6">
         <select
           className="input"
           value={product.audience}
@@ -282,9 +364,22 @@ export default function AddProductPage() {
             setProduct({ ...product, productType: e.target.value })
           }
         >
-          <option value="">Category</option>
+          <option value="">Type</option>
           {PRODUCT_TYPES.map(p => (
             <option key={p}>{p}</option>
+          ))}
+        </select>
+
+        <select
+          className="input"
+          value={product.productCategory}
+          onChange={e =>
+            setProduct({ ...product, productCategory: e.target.value })
+          }
+        >
+          <option value="">Category</option>
+          {PRODUCT_CATEGORIES.map(c => (
+            <option key={c}>{c}</option>
           ))}
         </select>
       </section>
@@ -294,17 +389,44 @@ export default function AddProductPage() {
         <h3 className="font-semibold">Variants</h3>
 
         {colors.map((color, ci) => (
-          <div key={ci} className="border rounded-xl p-5 space-y-4">
-            <select
-              className="input w-48"
-              value={color.name}
-              onChange={e => updateColor(ci, e.target.value)}
-            >
-              <option value="">Color</option>
-              {COLORS.map(c => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
+          <div key={ci} className="border rounded-xl p-5 space-y-3">
+            {/* COLOR PICKER */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold">Select Color</label>
+              {color.name && (
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className="w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
+                    style={{
+                      backgroundColor: COLORS.find(c => c.name === color.name)?.hex || "#000",
+                    }}
+                    title={color.name}
+                  />
+                  <span className="text-xs font-medium">{color.name}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-10 gap-2 bg-gray-50 p-3 rounded-lg">
+                {COLORS.map(c => (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={() => updateColor(ci, c.name)}
+                    className={`w-7 h-7 rounded-full transition-all border-2 ${
+                      color.name === c.name
+                        ? "border-indigo-600 ring-2 ring-indigo-400 scale-110"
+                        : "border-gray-200 hover:border-gray-400"
+                    }`}
+                    style={{ backgroundColor: c.hex }}
+                    title={c.name}
+                  />
+                ))}
+              </div>
+
+              {!color.name && (
+                <p className="text-xs text-red-500">Please select a color</p>
+              )}
+            </div>
 
             {color.sizes.map((s, si) => (
               <div key={si} className="grid grid-cols-4 gap-4">

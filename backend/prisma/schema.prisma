@@ -30,6 +30,11 @@ enum AudienceCategory {
   MEN
   WOMEN
   KIDS
+}
+
+enum ProductCategory {
+  REGULAR
+  GEAR
   ACCESSORIES
 }
 
@@ -52,6 +57,14 @@ enum OrderStatus {
   PRINTING
   SHIPPED
   DELIVERED
+  CANCELLED
+}
+
+enum FulfillmentStatus {
+  PENDING
+  IN_PROGRESS
+  READY_FOR_PICKUP
+  COMPLETED
   CANCELLED
 }
 
@@ -99,9 +112,53 @@ model User {
   reviews      Review[]
   designs      UserDesign[]
   couponUsages CouponUsage[]
-  payouts      VendorPayout[]
+  payouts           VendorPayout[]
+  commissionConfig  CommissionConfig?
+  vendorInventories VendorInventory[]
 
   assignedOrderItems OrderItem[] @relation("VendorOrders")
+}
+
+/**
+ * ======================================================
+ * VENDOR INVENTORY
+ * ======================================================
+ */
+model VendorInventory {
+  id        String @id @default(uuid())
+  vendorId  String
+  productId String
+  quantity  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor  User    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@index([productId])
+}
+
+/**
+ * ======================================================
+ * VENDOR COMMISSION CONFIG
+ * ======================================================
+ */
+model CommissionConfig {
+  id                    String  @id @default(uuid())
+  vendorId              String  @unique
+  commissionPercentage  Int     @default(15)
+  minimumOrderValue     Int     @default(0)
+  payoutThreshold       Int     @default(1000)
+  isActive              Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendor User @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
 }
 
 /**
@@ -114,7 +171,8 @@ model Product {
   name        String
   description String?
 
-  audience    AudienceCategory
+  audience        AudienceCategory
+  productCategory ProductCategory @default(REGULAR)
   productType ProductType
 
   minPrice Int
@@ -125,8 +183,9 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  images ProductImage[]
-  colors ProductColor[]
+  images        ProductImage[]
+  colors        ProductColor[]
+  vendorInventories VendorInventory[]
 }
 
 /**
@@ -373,7 +432,15 @@ model OrderItem {
   price     Int
   costPrice Int?
 
+  // Optional links to the user's design/mockup/PDF for this item
+  imageUrl  String?
+  mockupUrl String?
+  pdfUrl    String?  // Design file or production specs as PDF
+
   vendorId String?
+  
+  fulfillmentStatus FulfillmentStatus @default(PENDING)
+  fulfillmentDate   DateTime?
 
   order  Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
   size   ProductSize @relation(fields: [sizeId], references: [id])

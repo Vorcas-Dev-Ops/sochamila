@@ -127,6 +127,20 @@ export const getAllProducts = async () => {
           isPrimary: true,
         },
       },
+      colors: {
+        select: {
+          id: true,
+          name: true,
+          images: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              imageUrl: true,
+              sortOrder: true,
+            },
+          },
+        },
+      },
     },
   });
 };
@@ -352,7 +366,25 @@ export const updateProductStatus = async (
 ===================================================== */
 
 export const deleteProduct = async (id: string) => {
-  return prisma.product.delete({
-    where: { id },
+  // Prevent deleting products that have been ordered (order items reference sizes)
+  // Find sizes belonging to this product
+  const sizes = await prisma.productSize.findMany({
+    where: {
+      color: { productId: id },
+    },
+    select: { id: true },
   });
+
+  if (sizes.length > 0) {
+    const sizeIds = sizes.map((s) => s.id);
+    const linkedOrders = await prisma.orderItem.count({
+      where: { sizeId: { in: sizeIds } },
+    });
+
+    if (linkedOrders > 0) {
+      throw new Error("Product has associated orders and cannot be deleted");
+    }
+  }
+
+  return prisma.product.delete({ where: { id } });
 };

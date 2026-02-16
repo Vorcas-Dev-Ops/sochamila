@@ -88,41 +88,56 @@ const formatProduct = (product: any): ShopProduct => {
    GET ALL PUBLIC PRODUCTS (SHOP PAGE)
 ====================================================== */
 
-export const getAllPublicProducts = async (): Promise<ShopProduct[]> => {
-  const products = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      isAvailable: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    include: {
-      // Product-level images
-      images: {
-        orderBy: { sortOrder: "asc" },
+export const getAllPublicProducts = async (
+  page = 1,
+  limit = 10
+): Promise<{ items: ShopProduct[]; total: number }> => {
+  const skip = (page - 1) * limit;
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        isActive: true,
+        isAvailable: true,
       },
-      colors: {
-        include: {
-          // Color-specific images
-          images: {
-            orderBy: { sortOrder: "asc" },
-          },
-          sizes: {
-            where: {
-              isActive: true,
-              stock: { gt: 0 },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit,
+      skip,
+      include: {
+        // Product-level images
+        images: {
+          orderBy: { sortOrder: "asc" },
+        },
+        colors: {
+          include: {
+            // Color-specific images
+            images: {
+              orderBy: { sortOrder: "asc" },
             },
-            orderBy: {
-              price: "asc",
+            sizes: {
+              where: {
+                isActive: true,
+                stock: { gt: 0 },
+              },
+              orderBy: {
+                price: "asc",
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.product.count({
+      where: {
+        isActive: true,
+        isAvailable: true,
+      },
+    }),
+  ]);
 
-  return products.map(formatProduct);
+  return { items: products.map(formatProduct), total };
 };
 
 /* ======================================================

@@ -12,6 +12,7 @@ import adminProductRoutes from "./products/admin.product.routes";
 // Stickers + Categories
 import adminStickerRoutes from "../modules/stickers/sticker.routes";
 import adminStickerCategoryRoutes from "../modules/stickers/category.routes";
+import adminVendorRoutes from "./admin.vendor.routes";
 
 const router = Router();
 
@@ -20,6 +21,15 @@ const router = Router();
 ========================================================= */
 
 router.use(authMiddleware);
+// Debug middleware to check what role is being passed
+router.use((req, res, next) => {
+  console.log("[ADMIN ROUTES] User info:", {
+    id: req.user?.id,
+    role: req.user?.role,
+    email: req.user?.email,
+  });
+  next();
+});
 router.use(roleMiddleware([Role.ADMIN]));
 
 /* =========================================================
@@ -28,6 +38,8 @@ router.use(roleMiddleware([Role.ADMIN]));
 
 router.get("/stats", async (req, res) => {
   try {
+    console.log("[ADMIN STATS] Fetching stats for admin:", req.user?.id);
+    
     const [
       totalProducts,
       totalOrders,
@@ -64,16 +76,29 @@ router.get("/stats", async (req, res) => {
       }),
     ]);
 
-    res.json({
+    const stats = {
       products: totalProducts,
       orders: totalOrders,
       vendors: totalVendors,
       revenue: revenueResult._sum.totalAmount || 0,
+    };
+
+    console.log("[ADMIN STATS] Stats calculated successfully:", stats);
+
+    res.json({
+      success: true,
+      data: stats,
+      statusCode: 200,
+      message: "Dashboard stats retrieved successfully",
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Admin dashboard stats error:", error);
+    console.error("[ADMIN STATS] Error:", error);
     res.status(500).json({
+      success: false,
+      statusCode: 500,
       message: "Failed to load dashboard statistics",
+      timestamp: new Date().toISOString(),
     });
   }
 });
@@ -85,10 +110,17 @@ router.get("/stats", async (req, res) => {
 // Products
 router.use("/products", adminProductRoutes);
 
+// Orders
+import adminOrderRoutes from "./admin.order.routes";
+router.use("/orders", adminOrderRoutes);
+
 // Stickers
 router.use("/stickers", adminStickerRoutes);
 
 // Sticker Categories
 router.use("/sticker-categories", adminStickerCategoryRoutes);
+
+// Vendors
+router.use("/vendors", adminVendorRoutes);
 
 export default router;

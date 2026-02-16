@@ -11,7 +11,7 @@ const ai_generate_service_1 = require("./ai.generate.service");
  */
 async function generateAIImage(req, res, next) {
     try {
-        const { prompt, aspectRatio, model } = req.body;
+        const { prompt, model } = req.body;
         // Validate prompt
         if (!prompt || typeof prompt !== "string") {
             return res.status(400).json({
@@ -33,8 +33,8 @@ async function generateAIImage(req, res, next) {
         }
         // Generate image based on model selection
         const result = model === "sdxl"
-            ? await (0, ai_generate_service_1.generateImageSDXL)({ prompt, aspectRatio })
-            : await (0, ai_generate_service_1.generateImage)({ prompt, aspectRatio });
+            ? await (0, ai_generate_service_1.generateImageSDXL)({ prompt })
+            : await (0, ai_generate_service_1.generateImage)({ prompt });
         res.json(result);
     }
     catch (error) {

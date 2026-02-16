@@ -59,32 +59,53 @@ export async function loginUserService(
   email: string,
   password: string
 ) {
-  // 1️⃣ Find user
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-  });
+  try {
+    // 1️⃣ Find user
+    console.log("[AUTH] Attempting login for email:", email);
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
 
-  if (!user || !user.isActive) {
-    throw new Error("Invalid email or password");
+    console.log("[AUTH] User found:", !!user);
+    console.log("[AUTH] User data:", user ? { id: user.id, email: user.email, isActive: user.isActive, role: user.role } : null);
+
+    if (!user) {
+      console.log("[AUTH] User not found in database");
+      throw new Error("Invalid email or password");
+    }
+
+    if (!user.isActive) {
+      console.log("[AUTH] User account is inactive");
+      throw new Error("Invalid email or password");
+    }
+
+    // 2️⃣ Compare password
+    console.log("[AUTH] Checking password...");
+    const isPasswordValid = await comparePassword(
+      password,
+      user.password
+    );
+
+    console.log("[AUTH] Password valid:", isPasswordValid);
+
+    if (!isPasswordValid) {
+      console.log("[AUTH] Password mismatch");
+      throw new Error("Invalid email or password");
+    }
+
+    // 3️⃣ Generate token
+    console.log("[AUTH] Generating JWT token...");
+    const token = signToken({
+      id: user.id,
+      role: user.role,
+    });
+
+    console.log("[AUTH] Login successful for:", email);
+    return { token, user };
+  } catch (error: any) {
+    console.error("[AUTH] Login error:", error.message);
+    throw error;
   }
-
-  // 2️⃣ Compare password
-  const isPasswordValid = await comparePassword(
-    password,
-    user.password
-  );
-
-  if (!isPasswordValid) {
-    throw new Error("Invalid email or password");
-  }
-
-  // 3️⃣ Generate token
-  const token = signToken({
-    id: user.id,
-    role: user.role,
-  });
-
-  return { token, user };
 }
 
 /* =====================================================

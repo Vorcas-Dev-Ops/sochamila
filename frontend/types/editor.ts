@@ -47,14 +47,14 @@ export interface BaseLayer {
    LAYER TYPES
 ========================================================= */
 
-export type LayerType = "text" | "image" | "sticker";
+export type LayerType = "text" | "image" | "sticker" | "pattern";
 
 /* =========================================================
    TEXT LAYER
 ========================================================= */
 
 export type TextAlign = "left" | "center" | "right";
-export type TextStyle = "normal" | "shadow" | "outline" | "3d";
+export type TextStyle = "normal" | "shadow" | "outline" | "3d" | "glow" | "emboss" | "neon" | "gradient" | "chrome" | "glass" | "fire" | "wave" | "blur";
 
 export interface TextLayer extends BaseLayer {
   readonly type: "text";
@@ -67,6 +67,9 @@ export interface TextLayer extends BaseLayer {
   fontFamily: string;
   fontWeight: number;
   color: string;
+  isItalic?: boolean;
+  isUnderline?: boolean;
+  isStrikethrough?: boolean;
 
   /* ---------- Layout ---------- */
   textAlign: TextAlign;
@@ -76,6 +79,25 @@ export interface TextLayer extends BaseLayer {
   /* ---------- Effects ---------- */
   textStyle: TextStyle;
   curve: number; // -180 → 180 (SVG arc / warp)
+  
+  /* ---------- Shadow Effects ---------- */
+  shadowColor?: string;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  shadowBlur?: number;
+  
+  /* ---------- 3D Effects ---------- */
+  depth3d?: number; // 0 → 50
+  angle3d?: number; // 0 → 360
+  
+  /* ---------- Glow Effects ---------- */
+  glowColor?: string;
+  glowSize?: number; // 0 → 20
+  
+  /* ---------- Gradient Text ---------- */
+  gradientStart?: string;
+  gradientEnd?: string;
+  gradientAngle?: number;
 }
 
 /* =========================================================
@@ -107,13 +129,35 @@ export interface StickerLayer extends BaseLayer {
 }
 
 /* =========================================================
+   PATTERN LAYER
+========================================================= */
+
+export type PatternType = "stripes" | "dots" | "grid" | "diagonal" | "checkerboard" | "waves" | "hexagon" | "triangle";
+
+export interface PatternLayer extends BaseLayer {
+  readonly type: "pattern";
+
+  /** Pattern type */
+  patternType: PatternType;
+
+  /** Pattern colors */
+  color1: string;
+  color2: string;
+
+  /** Pattern properties */
+  scale: number;
+  rotation: number;
+}
+
+/* =========================================================
    DISCRIMINATED UNION (EDITOR CORE)
 ========================================================= */
 
 export type EditorLayer =
   | TextLayer
   | ImageLayer
-  | StickerLayer;
+  | StickerLayer
+  | PatternLayer;
 
 /* =========================================================
    TYPE GUARDS (SAFE NARROWING)
@@ -127,6 +171,9 @@ export const isImageLayer = (layer: EditorLayer): layer is ImageLayer =>
 
 export const isStickerLayer = (layer: EditorLayer): layer is StickerLayer =>
   layer.type === "sticker";
+
+export const isPatternLayer = (layer: EditorLayer): layer is PatternLayer =>
+  layer.type === "pattern";
 
 /* =========================================================
    DESIGN MODEL (SAVE / LOAD)

@@ -15,7 +15,7 @@ export async function generateAIImage(
   next: NextFunction
 ) {
   try {
-    const { prompt, aspectRatio, model } = req.body;
+    const { prompt, model } = req.body;
 
     // Validate prompt
     if (!prompt || typeof prompt !== "string") {
@@ -42,8 +42,8 @@ export async function generateAIImage(
     // Generate image based on model selection
     const result =
       model === "sdxl"
-        ? await generateImageSDXL({ prompt, aspectRatio })
-        : await generateImage({ prompt, aspectRatio });
+        ? await generateImageSDXL({ prompt })
+        : await generateImage({ prompt });
 
     res.json(result);
   } catch (error) {

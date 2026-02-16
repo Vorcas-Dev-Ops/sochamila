@@ -33,51 +33,96 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.remove = exports.toggle = exports.upload = exports.getAll = void 0;
+exports.remove = exports.moveToCategory = exports.toggle = exports.upload = exports.getAll = void 0;
 const StickerService = __importStar(require("./sticker.service"));
 /* ===============================
    GET ALL STICKERS
 ================================ */
 const getAll = async (_req, res) => {
-    const data = await StickerService.getAll();
-    res.json(data);
+    try {
+        const data = await StickerService.getAll();
+        res.json(data);
+    }
+    catch (error) {
+        console.error("Get stickers error:", error);
+        res.status(500).json({ message: "Failed to get stickers" });
+    }
 };
 exports.getAll = getAll;
 /* ===============================
    UPLOAD STICKERS
 ================================ */
 const upload = async (req, res) => {
-    const files = req.files;
-    const { categoryId } = req.body;
-    if (!categoryId) {
-        return res.status(400).json({
-            message: "categoryId is required",
-        });
+    try {
+        const files = req.files;
+        const { categoryId } = req.body;
+        if (!categoryId) {
+            return res.status(400).json({
+                message: "categoryId is required",
+            });
+        }
+        if (!files || files.length === 0) {
+            return res.status(400).json({
+                message: "No files uploaded",
+            });
+        }
+        const result = await StickerService.upload(files, categoryId);
+        res.json(result);
     }
-    if (!files || files.length === 0) {
-        return res.status(400).json({
-            message: "No files uploaded",
-        });
+    catch (error) {
+        console.error("Upload stickers error:", error);
+        res.status(500).json({ message: "Failed to upload stickers" });
     }
-    const result = await StickerService.upload(files, categoryId);
-    res.json(result);
 };
 exports.upload = upload;
 /* ===============================
    TOGGLE ENABLE / DISABLE
 ================================ */
 const toggle = async (req, res) => {
-    const { id } = req.params;
-    const data = await StickerService.toggle(id);
-    res.json(data);
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        const data = await StickerService.toggle(id);
+        res.json(data);
+    }
+    catch (error) {
+        console.error("Toggle sticker error:", error);
+        res.status(500).json({ message: "Failed to toggle sticker" });
+    }
 };
 exports.toggle = toggle;
+/* ===============================
+   MOVE TO CATEGORY
+================================ */
+const moveToCategory = async (req, res) => {
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        const { categoryId } = req.body;
+        if (!categoryId) {
+            return res.status(400).json({
+                message: "categoryId is required",
+            });
+        }
+        const data = await StickerService.moveToCategory(id, categoryId);
+        res.json(data);
+    }
+    catch (error) {
+        console.error("Move sticker error:", error);
+        res.status(500).json({ message: "Failed to move sticker" });
+    }
+};
+exports.moveToCategory = moveToCategory;
 /* ===============================
    DELETE STICKER
 ================================ */
 const remove = async (req, res) => {
-    const { id } = req.params;
-    await StickerService.remove(id);
-    res.json({ success: true });
+    try {
+        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        await StickerService.remove(id);
+        res.json({ success: true });
+    }
+    catch (error) {
+        console.error("Delete sticker error:", error);
+        res.status(500).json({ message: "Failed to delete sticker" });
+    }
 };
 exports.remove = remove;

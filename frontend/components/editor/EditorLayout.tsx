@@ -19,6 +19,7 @@ import {
 
 import { TextOptions } from "@/types/editor-options";
 import type { ProductVariantImage } from "@/types/product";
+import { generateImage } from "@/lib/api/ai";
 
 /* ================= HELPERS ================= */
 
@@ -148,24 +149,9 @@ export default function EditorLayout({
 
   const onGenerateAIImage = useCallback(
     async (prompt: string): Promise<string> => {
-      const response = await fetch("http://localhost:5000/api/ai/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt }),
-      });
-
-      const data = await response.json();
-
-      if (!data.success || !data.url) {
-        throw new Error(data.error || "Failed to generate image");
-      }
-
-      // Add the generated image to canvas
-      onAddImage(data.url);
-
-      return data.url;
+      const url = await generateImage(prompt);
+      onAddImage(url);
+      return url;
     },
     [onAddImage]
   );

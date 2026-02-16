@@ -22,6 +22,14 @@ import type { ProductVariantImage } from "@/types/product";
 
 /* ================= HELPERS ================= */
 
+// Convert relative URLs to absolute
+function toFullUrl(path: string): string {
+  if (path.startsWith("http")) return path;
+  if (path.startsWith("/uploads/")) return `http://localhost:5000${path}`;
+  if (path.startsWith("/")) return `http://localhost:5000${path}`;
+  return `http://localhost:5000/uploads/${path}`;
+}
+
 // Pass through images with view so editor can show correct image per side
 function buildEditorImages(
   images: ProductVariantImage[] = []
@@ -102,7 +110,9 @@ export default function EditorLayout({
     id: nanoid(),
     type: "image",
     side: activeSide,
-    src,
+    // Preserve data URLs (generated patterns / AI images) as-is, otherwise
+    // convert relative paths to full URLs for server-hosted images.
+    src: src.startsWith("data:") ? src : toFullUrl(src),
     x: 60,
     y: 60,
     width: 200,

@@ -7,7 +7,13 @@ import {
   EditorLayer,
   Side,
   TextLayer,
+  ImageLayer,
+  StickerLayer,
+  PatternLayer,
   isTextLayer,
+  isImageLayer,
+  isStickerLayer,
+  isPatternLayer,
 } from "@/types/editor";
 
 import { loadGoogleFont } from "@/utils/loadGoogleFont";
@@ -291,7 +297,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                 >
                   {selected && (
                     <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-50">
-                      {layer.type === "text" ? "TEXT" : "IMAGE"} · {layer.rotation || 0}°
+                      {isTextLayer(layer) ? "TEXT" : isImageLayer(layer) || isStickerLayer(layer) ? "IMAGE" : "PATTERN"} · {layer.rotation || 0}°
                     </div>
                   )}
                   <div
@@ -302,7 +308,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                   >
                     {isTextLayer(layer) ? (
                       <EnhancedText layer={layer} />
-                    ) : (
+                    ) : isImageLayer(layer) || isStickerLayer(layer) ? (
                       <img
                         src={layer.src}
                         className="w-full h-full object-contain"
@@ -311,6 +317,8 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                         }}
                         draggable={false}
                       />
+                    ) : (
+                      <PatternRenderer layer={layer} />
                     )}
                   </div>
                 </Rnd>
@@ -546,4 +554,160 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
       {layer.text}
     </div>
   );
+}
+
+/* ======================================================
+   PATTERN
+====================================================== */
+
+function PatternRenderer({ layer }: { layer: PatternLayer }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [patternUrl, setPatternUrl] = useState<string>("");
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    try {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const size = Math.max(layer.scale ?? 10, 5);
+      canvas.width = size * 2;
+      canvas.height = size * 2;
+
+      const color1 = layer.color1 || "#000000";
+      const color2 = layer.color2 || "#FFFFFF";
+
+      // Fill background
+      ctx.fillStyle = color1;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = color2;
+
+      if (layer.patternType === "stripes") {
+        for (let i = 0; i < canvas.width; i += size * 2) {
+          ctx.fillRect(i, 0, size, canvas.height);
+        }
+      } else if (layer.patternType === "dots") {
+        const dotSize = size / 3;
+        for (let x = dotSize; x < canvas.width; x += size) {
+          for (let y = dotSize; y < canvas.height; y += size) {
+            ctx.beginPath();
+            ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (layer.patternType === "checkerboard") {
+        for (let x = 0; x < canvas.width; x += size) {
+          for (let y = 0; y < canvas.height; y += size) {
+            if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
+              ctx.fillRect(x, y, size, size);
+            }
+          }
+        }
+      } else if (layer.patternType === "grid") {
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += size) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, canvas.height);
+          ctx.stroke();
+        }
+        for (let i = 0; i < canvas.height; i += size) {
+          ctx.beginPath();
+          ctx.moveTo(0, i);
+          ctx.lineTo(canvas.width, i);
+          ctx.stroke();
+        }
+      } else if (layer.patternType === "diagonal") {
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = 1;
+        for (let i = -canvas.height; i < canvas.width; i += size * 1.5) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i + canvas.height, canvas.height);
+          ctx.stroke();
+        }
+      } else if (layer.patternType === "waves") {
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = 2;
+        for (let x = 0; x < canvas.width; x += size * 2) {
+          ctx.beginPath();
+          for (let i = 0; i < canvas.height; i++) {
+            const y = (Math.sin((i + x) / (size / 2)) * (size / 2)) + (size / 2);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x + i / (canvas.height / size), y);
+          }
+          ctx.stroke();
+        }
+      } else if (layer.patternType === "hexagon") {
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = 1;
+        const hexSize = size / 2;
+        for (let x = 0; x < canvas.width; x += size * 1.5) {
+          for (let y = 0; y < canvas.height; y += size * 1.5) {
+            drawHexagon(ctx, x + hexSize, y + hexSize, hexSize);
+          }
+        }
+      } else if (layer.patternType === "triangle") {
+        ctx.fillStyle = color2;
+        for (let x = 0; x < canvas.width; x += size) {
+          for (let y = 0; y < canvas.height; y += size) {
+            ctx.beginPath();
+            ctx.moveTo(x + size / 2, y);
+            ctx.lineTo(x + size, y + size);
+            ctx.lineTo(x, y + size);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+      }
+
+      // Convert canvas to data URL
+      const url = canvas.toDataURL("image/png");
+      setPatternUrl(url);
+    } catch (e) {
+      console.error("Failed to generate pattern:", e);
+    }
+  }, [layer.patternType, layer.color1, layer.color2, layer.scale]);
+
+  const style: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    opacity: layer.opacity ?? 1,
+    backgroundImage: patternUrl ? `url(${patternUrl})` : undefined,
+    backgroundRepeat: "repeat",
+    backgroundSize: "auto",
+    backgroundColor: layer.color1,
+  };
+
+  return (
+    <>
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <div style={style} />
+    </>
+  );
+}
+
+/**
+ * Helper to draw hexagon on canvas
+ */
+function drawHexagon(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number
+) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = (i * Math.PI) / 3;
+    const hx = x + size * Math.cos(angle);
+    const hy = y + size * Math.sin(angle);
+    if (i === 0) ctx.moveTo(hx, hy);
+    else ctx.lineTo(hx, hy);
+  }
+  ctx.closePath();
+  ctx.stroke();
 }

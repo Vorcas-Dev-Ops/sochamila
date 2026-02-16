@@ -8,6 +8,8 @@ import categoryRoutes from "../modules/stickers/category.routes";
 import vendorRoutes from "../modules/vendor/vendor.routes";
 import customerRoutes from "../modules/customer/customer.routes";
 import orderRoutes from "../modules/orders/order.routes";
+import imagekitAuthRoutes from "./imagekit-auth";
+import uploadRoutes from "./upload";
 
 console.log("[ROUTES-INDEX] Starting route initialization...");
 console.log("[ROUTES-INDEX] vendorRoutes import successful:", vendorRoutes);
@@ -50,6 +52,23 @@ router.use("/customer", customerRoutes);
 
 console.log("[ROUTES-INDEX] Mounting order routes...");
 router.use("/orders", orderRoutes);
+
+console.log("[ROUTES-INDEX] Mounting ImageKit auth routes...");
+router.use("/imagekit-auth", imagekitAuthRoutes);
+
+console.log("[ROUTES-INDEX] Mounting upload routes...");
+router.use("/uploads", uploadRoutes);
+
+// Debug middleware to log all requests
+router.use((req: Request, res: Response, next: NextFunction) => {
+  console.log("[ROUTES-DEBUG] Incoming request:", {
+    method: req.method,
+    path: req.path,
+    url: req.originalUrl,
+    query: req.query,
+  });
+  next();
+});
 
 console.log("[ROUTES-INDEX] All routes mounted successfully!");
 

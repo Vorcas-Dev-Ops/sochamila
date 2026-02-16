@@ -47,7 +47,7 @@ export default function KeyboardHelp({ isOpen, onClose }: KeyboardHelpProps) {
         {/* Footer */}
         <div className="border-t bg-gray-50 px-6 py-4">
           <p className="text-xs text-gray-600 text-center">
-            💡 Pro tip: Learn these shortcuts to design faster!
+             Pro tip: Learn these shortcuts to design faster!
           </p>
         </div>
       </div>

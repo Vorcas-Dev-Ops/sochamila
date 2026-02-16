@@ -47,7 +47,7 @@ export interface BaseLayer {
    LAYER TYPES
 ========================================================= */
 
-export type LayerType = "text" | "image" | "sticker";
+export type LayerType = "text" | "image" | "sticker" | "pattern";
 
 /* =========================================================
    TEXT LAYER
@@ -129,13 +129,35 @@ export interface StickerLayer extends BaseLayer {
 }
 
 /* =========================================================
+   PATTERN LAYER
+========================================================= */
+
+export type PatternType = "stripes" | "dots" | "grid" | "diagonal" | "checkerboard" | "waves" | "hexagon" | "triangle";
+
+export interface PatternLayer extends BaseLayer {
+  readonly type: "pattern";
+
+  /** Pattern type */
+  patternType: PatternType;
+
+  /** Pattern colors */
+  color1: string;
+  color2: string;
+
+  /** Pattern properties */
+  scale: number;
+  rotation: number;
+}
+
+/* =========================================================
    DISCRIMINATED UNION (EDITOR CORE)
 ========================================================= */
 
 export type EditorLayer =
   | TextLayer
   | ImageLayer
-  | StickerLayer;
+  | StickerLayer
+  | PatternLayer;
 
 /* =========================================================
    TYPE GUARDS (SAFE NARROWING)
@@ -149,6 +171,9 @@ export const isImageLayer = (layer: EditorLayer): layer is ImageLayer =>
 
 export const isStickerLayer = (layer: EditorLayer): layer is StickerLayer =>
   layer.type === "sticker";
+
+export const isPatternLayer = (layer: EditorLayer): layer is PatternLayer =>
+  layer.type === "pattern";
 
 /* =========================================================
    DESIGN MODEL (SAVE / LOAD)

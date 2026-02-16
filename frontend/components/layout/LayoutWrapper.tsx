@@ -18,6 +18,7 @@ export function LayoutWrapper({
     "/login",
     "/register",
     "/editor",
+    "/configurator",
   ];
 
   // Check if current route should hide navbar

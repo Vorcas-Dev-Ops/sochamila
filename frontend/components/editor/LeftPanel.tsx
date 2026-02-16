@@ -32,6 +32,17 @@ interface LeftPanelProps {
 
   onAddImage: (src: string) => void;
   onUpdateImage: (patch: Partial<ImageLayer>) => void;
+  onAddPattern?: (opts: {
+    patternType: any;
+    color1: string;
+    color2: string;
+    scale: number;
+    rotation: number;
+    opacity?: number;
+  }) => void;
+  onUpdatePattern?: (patch: Partial<any>) => void;
+  lastPatternId?: string | null;
+  onUpdatePatternById?: (id: string, patch: Partial<any>) => void;
 
   onGenerateAIImage: (prompt: string) => Promise<string>;
 }
@@ -83,6 +94,10 @@ export default function LeftPanel({
   onUpdateText,
   onAddImage,
   onUpdateImage,
+  onAddPattern,
+  onUpdatePattern,
+  lastPatternId,
+  onUpdatePatternById,
   onGenerateAIImage,
 }: LeftPanelProps) {
   const uploadRef = useRef<HTMLInputElement>(null);
@@ -157,6 +172,7 @@ export default function LeftPanel({
   const [patternType, setPatternType] = useState<string>("stripes");
   const [patternColor1, setPatternColor1] = useState("#000000");
   const [patternColor2, setPatternColor2] = useState("#FFFFFF");
+  const [patternColor2Transparent, setPatternColor2Transparent] = useState(false);
   const [patternScale, setPatternScale] = useState(1);
   const [patternRotation, setPatternRotation] = useState(0);
   const [patternOpacity, setPatternOpacity] = useState(1);
@@ -182,22 +198,70 @@ export default function LeftPanel({
   /* ================= SYNC SELECTED LAYER ================= */
 
   useEffect(() => {
-    if (!selectedLayer || selectedLayer.type !== "text") return;
+    if (!selectedLayer) return;
 
-    const l = selectedLayer as TextLayer;
+    if (selectedLayer.type === "text") {
+      const l = selectedLayer as TextLayer;
+      loadGoogleFont(l.fontFamily);
+      setText(l.text);
+      setFontFamily(l.fontFamily);
+      setFontSize(l.fontSize);
+      setFontWeight(l.fontWeight);
+      setLetterSpacing(l.letterSpacing);
+      setLineHeight(l.lineHeight);
+      setColor(l.color);
+      setOpacity(l.opacity ?? 1);
+      setTextStyle(l.textStyle);
+      return;
+    }
 
-    loadGoogleFont(l.fontFamily);
-
-    setText(l.text);
-    setFontFamily(l.fontFamily);
-    setFontSize(l.fontSize);
-    setFontWeight(l.fontWeight);
-    setLetterSpacing(l.letterSpacing);
-    setLineHeight(l.lineHeight);
-    setColor(l.color);
-    setOpacity(l.opacity ?? 1);
-    setTextStyle(l.textStyle);
+    // If a PatternLayer is selected, sync its values into the UI controls
+    if (selectedLayer.type === "pattern") {
+      const p = selectedLayer as any;
+      setPatternType(p.patternType || "stripes");
+      setPatternColor1(p.color1 || "#000000");
+      if (p.color2 === "transparent") {
+        setPatternColor2Transparent(true);
+        setPatternColor2("#ffffff");
+      } else {
+        setPatternColor2Transparent(false);
+        setPatternColor2(p.color2 || "#ffffff");
+      }
+      // Map renderer scale back to UI scale (inverse of earlier mapping)
+      const uiScale = p.scale ? Math.max(0.01, Math.round(100 / p.scale)) : 1;
+      setPatternScale(uiScale);
+      setPatternRotation(p.rotation || 0);
+      setPatternOpacity(p.opacity ?? 1);
+    }
   }, [selectedLayer]);
+
+  /* ================= LIVE-UPDATE PATTERN WHEN SELECTED ================= */
+  useEffect(() => {
+    // Map UI scale to renderer scale (tile size)
+    const tile = Math.max(8, Math.round(100 / Math.max(0.01, patternScale)));
+
+    const patch = {
+      patternType: patternType as any,
+      color1: patternColor1,
+      color2: patternColor2Transparent ? 'transparent' : patternColor2,
+      scale: tile,
+      rotation: patternRotation,
+      opacity: patternOpacity,
+    };
+
+    if (selectedLayer && (selectedLayer as any).type === "pattern") {
+      if (onUpdatePattern) onUpdatePattern(patch);
+      return;
+    }
+
+    // If no layer selected, but there is a last pattern on canvas, update it
+    if (!selectedLayer && lastPatternId && onUpdatePatternById) {
+      onUpdatePatternById(lastPatternId, patch);
+      return;
+    }
+  // Only trigger when UI controls change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patternType, patternColor1, patternColor2, patternColor2Transparent, patternScale, patternRotation, patternOpacity]);
 
   /* ================= FETCH GRAPHICS ================= */
 
@@ -1092,12 +1156,32 @@ export default function LeftPanel({
                   </div>
                   <div className="flex-1">
                     <label className="text-xs text-slate-600 block mb-1">Color 2</label>
-                    <input
-                      type="color"
-                      value={patternColor2}
-                      onChange={e => setPatternColor2(e.target.value)}
-                      className="w-full h-8 rounded cursor-pointer"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={patternColor2}
+                        onChange={e => { setPatternColor2(e.target.value); setPatternColor2Transparent(false); }}
+                        disabled={patternColor2Transparent}
+                        className="w-full h-8 rounded cursor-pointer"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => { setPatternColor1('#000000'); setPatternColor2Transparent(true); }}
+                        className="text-xs px-2 py-1 rounded border bg-slate-50 hover:bg-slate-100"
+                        title="Set Black + Transparent"
+                      >
+                        Black + Transparent
+                      </button>
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                      <input
+                        id="color2Transparent"
+                        type="checkbox"
+                        checked={patternColor2Transparent}
+                        onChange={e => setPatternColor2Transparent(e.target.checked)}
+                      />
+                      <label htmlFor="color2Transparent">Color 2 transparent</label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1137,8 +1221,8 @@ export default function LeftPanel({
                 <p className="text-xs font-semibold text-slate-700">Preview</p>
                 <div
                   className="w-full h-24 rounded border border-slate-300 bg-white"
-                  style={{
-                    backgroundImage: `url("${generatePatternSVG(patternType, patternColor1, patternColor2, patternScale, patternRotation)}")`,
+                    style={{
+                    backgroundImage: `url("${generatePatternSVG(patternType, patternColor1, patternColor2Transparent ? 'transparent' : patternColor2, patternScale, patternRotation)}")`,
                     // tile size inversely related to scale
                     backgroundSize: `${Math.max(8, Math.round(100 / Math.max(0.01, patternScale)))}px ${Math.max(8, Math.round(100 / Math.max(0.01, patternScale)))}px`,
                     opacity: patternOpacity,
@@ -1150,45 +1234,20 @@ export default function LeftPanel({
 
               {/* Add Pattern Button */}
               <button
-                onClick={() => {
-                  const svgData = generatePatternSVG(patternType, patternColor1, patternColor2, patternScale, patternRotation);
+                  onClick={() => {
+                  // Add as a PatternLayer so it can be live-updated
                   const tile = Math.max(8, Math.round(100 / Math.max(0.01, patternScale)));
-
-                  // Create a canvas sized to one tile and draw the SVG into it
-                  const canvas = document.createElement('canvas');
-                  canvas.width = tile;
-                  canvas.height = tile;
-                  const ctx = canvas.getContext('2d')!;
-
-                  const img = new Image();
-                  img.crossOrigin = 'anonymous';
-                  img.onload = () => {
-                    // Create a larger canvas and fill it with the repeating tile
-                    const repeat = 8;
-                    const size = tile * repeat;
-                    canvas.width = size;
-                    canvas.height = size;
-                    ctx.clearRect(0, 0, size, size);
-                    ctx.globalAlpha = patternOpacity;
-                    const patternFill = ctx.createPattern(img, 'repeat');
-                    if (patternFill) {
-                      ctx.fillStyle = patternFill;
-                      ctx.fillRect(0, 0, size, size);
-                    } else {
-                      // Fallback: draw tiled manually
-                      for (let x = 0; x < repeat; x++) {
-                        for (let y = 0; y < repeat; y++) {
-                          ctx.drawImage(img, x * tile, y * tile, tile, tile);
-                        }
-                      }
-                    }
-                    ctx.globalAlpha = 1;
-                    onAddImage(canvas.toDataURL());
-                  };
-                  img.onerror = (err) => {
-                    console.error('Failed to load pattern SVG image', err);
-                  };
-                  img.src = svgData;
+                  const color2 = patternColor2Transparent ? 'transparent' : patternColor2;
+                  if (onAddPattern) {
+                    onAddPattern({
+                      patternType: patternType as any,
+                      color1: patternColor1,
+                      color2,
+                      scale: tile,
+                      rotation: patternRotation,
+                      opacity: patternOpacity,
+                    });
+                  }
                 }}
                 className="w-full bg-indigo-600 text-white py-2 rounded font-semibold hover:bg-indigo-700 transition"
               >
@@ -1314,59 +1373,59 @@ function generatePatternSVG(
     case "stripes":
       pattern = `
         <pattern id="p" x="0" y="0" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse" patternTransform="rotate(${rotation})">
-          <rect width="${tile / 2}" height="${tile}" fill="${color1}"/>
-          <rect x="${tile / 2}" width="${tile / 2}" height="${tile}" fill="${color2}"/>
+          <rect width="${tile / 2}" height="${tile}" fill="${color1 === 'transparent' ? 'none' : color1}"/>
+          <rect x="${tile / 2}" width="${tile / 2}" height="${tile}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
         </pattern>`;
       break;
     case "dots":
       pattern = `
         <pattern id="p" x="0" y="0" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse" patternTransform="rotate(${rotation})">
-          <rect width="${tile}" height="${tile}" fill="${color2}"/>
-          <circle cx="${tile / 2}" cy="${tile / 2}" r="${Math.max(2, tile / 4)}" fill="${color1}"/>
+          <rect width="${tile}" height="${tile}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
+          <circle cx="${tile / 2}" cy="${tile / 2}" r="${Math.max(2, tile / 4)}" fill="${color1 === 'transparent' ? 'none' : color1}"/>
         </pattern>`;
       break;
     case "grid":
       pattern = `
         <pattern id="p" x="0" y="0" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse" patternTransform="rotate(${rotation})">
-          <rect width="${tile}" height="${tile}" fill="${color2}"/>
-          <path d="M ${tile} 0 L 0 0 0 ${tile}" fill="none" stroke="${color1}" stroke-width="${Math.max(1, tile/25)}"/>
+          <rect width="${tile}" height="${tile}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
+          <path d="M ${tile} 0 L 0 0 0 ${tile}" fill="none" stroke="${color1 === 'transparent' ? 'none' : color1}" stroke-width="${Math.max(1, tile/25)}"/>
         </pattern>`;
       break;
     case "diagonal":
       pattern = `
         <pattern id="p" x="0" y="0" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse" patternTransform="rotate(${rotation})">
-          <rect width="${tile}" height="${tile}" fill="${color2}"/>
-          <path d="M-${tile},0 l${tile * 2},${tile * 2} M0,-${tile} l${tile * 2},${tile * 2}" stroke="${color1}" stroke-width="${Math.max(1, tile/25)}"/>
+          <rect width="${tile}" height="${tile}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
+          <path d="M-${tile},0 l${tile * 2},${tile * 2} M0,-${tile} l${tile * 2},${tile * 2}" stroke="${color1 === 'transparent' ? 'none' : color1}" stroke-width="${Math.max(1, tile/25)}"/>
         </pattern>`;
       break;
     case "checkerboard":
       pattern = `
         <pattern id="p" x="0" y="0" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse" patternTransform="rotate(${rotation})">
-          <rect width="${tile/2}" height="${tile/2}" fill="${color1}"/>
-          <rect x="${tile/2}" y="${tile/2}" width="${tile/2}" height="${tile/2}" fill="${color1}"/>
-          <rect x="${tile/2}" width="${tile/2}" height="${tile/2}" fill="${color2}"/>
-          <rect y="${tile/2}" width="${tile/2}" height="${tile/2}" fill="${color2}"/>
+          <rect width="${tile/2}" height="${tile/2}" fill="${color1 === 'transparent' ? 'none' : color1}"/>
+          <rect x="${tile/2}" y="${tile/2}" width="${tile/2}" height="${tile/2}" fill="${color1 === 'transparent' ? 'none' : color1}"/>
+          <rect x="${tile/2}" width="${tile/2}" height="${tile/2}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
+          <rect y="${tile/2}" width="${tile/2}" height="${tile/2}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
         </pattern>`;
       break;
     case "waves":
       pattern = `
         <pattern id="p" x="0" y="0" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse" patternTransform="rotate(${rotation})">
-          <rect width="${tile}" height="${tile}" fill="${color2}"/>
-          <path d="M0,${tile / 2} Q${tile / 4},${tile / 4} ${tile / 2},${tile / 2} T${tile},${tile / 2}" stroke="${color1}" stroke-width="${Math.max(1, tile/20)}" fill="none"/>
+          <rect width="${tile}" height="${tile}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
+          <path d="M0,${tile / 2} Q${tile / 4},${tile / 4} ${tile / 2},${tile / 2} T${tile},${tile / 2}" stroke="${color1 === 'transparent' ? 'none' : color1}" stroke-width="${Math.max(1, tile/20)}" fill="none"/>
         </pattern>`;
       break;
     case "hexagon":
       pattern = `
         <pattern id="p" x="0" y="0" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse" patternTransform="rotate(${rotation})">
-          <rect width="${tile}" height="${tile}" fill="${color2}"/>
-          <polygon points="${tile/2},${tile/6} ${tile*5/6},${tile/3} ${tile*5/6},${tile*2/3} ${tile/2},${tile*5/6} ${tile/6},${tile*2/3} ${tile/6},${tile/3}" fill="none" stroke="${color1}" stroke-width="${Math.max(1, tile/25)}"/>
+          <rect width="${tile}" height="${tile}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
+          <polygon points="${tile/2},${tile/6} ${tile*5/6},${tile/3} ${tile*5/6},${tile*2/3} ${tile/2},${tile*5/6} ${tile/6},${tile*2/3} ${tile/6},${tile/3}" fill="none" stroke="${color1 === 'transparent' ? 'none' : color1}" stroke-width="${Math.max(1, tile/25)}"/>
         </pattern>`;
       break;
     case "triangle":
       pattern = `
         <pattern id="p" x="0" y="0" width="${tile}" height="${tile}" patternUnits="userSpaceOnUse" patternTransform="rotate(${rotation})">
-          <rect width="${tile}" height="${tile}" fill="${color2}"/>
-          <polygon points="${tile/2},${tile/4} ${tile*3/4},${tile*3/4} ${tile/4},${tile*3/4}" fill="${color1}"/>
+          <rect width="${tile}" height="${tile}" fill="${color2 === 'transparent' ? 'none' : color2}"/>
+          <polygon points="${tile/2},${tile/4} ${tile*3/4},${tile*3/4} ${tile/4},${tile*3/4}" fill="${color1 === 'transparent' ? 'none' : color1}"/>
         </pattern>`;
       break;
     default:

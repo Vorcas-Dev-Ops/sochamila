@@ -15,6 +15,7 @@ import {
   Side,
   TextLayer,
   ImageLayer,
+  PatternLayer,
 } from "@/types/editor";
 
 import { TextOptions } from "@/types/editor-options";
@@ -68,6 +69,13 @@ export default function EditorLayout({
     () => layers.find(l => l.id === selectedLayerId) ?? null,
     [layers, selectedLayerId]
   );
+
+  const lastPatternId = useMemo(() => {
+    for (let i = layers.length - 1; i >= 0; i--) {
+      if (layers[i].type === "pattern") return layers[i].id;
+    }
+    return null;
+  }, [layers]);
 
   const nextZIndex = useMemo(
     () =>
@@ -125,6 +133,32 @@ export default function EditorLayout({
     zIndex: nextZIndex,
   });
 
+  const createPatternLayer = (opts: {
+    patternType: PatternLayer["patternType"];
+    color1: string;
+    color2: string;
+    scale: number;
+    rotation: number;
+    opacity?: number;
+  }): PatternLayer => ({
+    id: nanoid(),
+    type: "pattern",
+    side: activeSide,
+    patternType: opts.patternType,
+    color1: opts.color1,
+    color2: opts.color2,
+    scale: opts.scale,
+    rotation: opts.rotation,
+    x: 60,
+    y: 60,
+    width: 200,
+    height: 200,
+    opacity: opts.opacity ?? 1,
+    locked: false,
+    visible: true,
+    zIndex: nextZIndex,
+  });
+
   /* ================= ADD ================= */
 
   const onAddText = useCallback(
@@ -139,6 +173,22 @@ export default function EditorLayout({
   const onAddImage = useCallback(
     (src: string) => {
       const layer = createImageLayer(src);
+      setLayers(prev => [...prev, layer]);
+      setSelectedLayerId(layer.id);
+    },
+    [activeSide, nextZIndex]
+  );
+
+  const onAddPattern = useCallback(
+    (opts: {
+      patternType: PatternLayer["patternType"];
+      color1: string;
+      color2: string;
+      scale: number;
+      rotation: number;
+      opacity?: number;
+    }) => {
+      const layer = createPatternLayer(opts);
       setLayers(prev => [...prev, layer]);
       setSelectedLayerId(layer.id);
     },
@@ -205,6 +255,34 @@ export default function EditorLayout({
       );
     },
     [selectedLayerId]
+  );
+
+  const onUpdatePattern = useCallback(
+    (patch: Partial<PatternLayer>) => {
+      if (!selectedLayerId) return;
+
+      setLayers(prev =>
+        prev.map(l =>
+          l.id === selectedLayerId && l.type === "pattern"
+            ? { ...l, ...patch }
+            : l
+        )
+      );
+    },
+    [selectedLayerId]
+  );
+
+  const onUpdatePatternById = useCallback(
+    (id: string, patch: Partial<PatternLayer>) => {
+      setLayers(prev =>
+        prev.map(l =>
+          l.id === id && l.type === "pattern"
+            ? { ...l, ...patch }
+            : l
+        )
+      );
+    },
+    []
   );
 
   /* ================= DELETE ================= */
@@ -336,6 +414,10 @@ export default function EditorLayout({
         onUpdateText={onUpdateText}
         onAddImage={onAddImage}
         onUpdateImage={onUpdateImage}
+        onAddPattern={onAddPattern}
+        onUpdatePattern={onUpdatePattern}
+        lastPatternId={lastPatternId}
+        onUpdatePatternById={onUpdatePatternById}
         onGenerateAIImage={onGenerateAIImage}
       />
 

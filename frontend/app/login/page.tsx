@@ -16,10 +16,10 @@ export default function LoginPage() {
 
   // When user lands on login page, force logout
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (token) {
-      localStorage.removeItem("token");
-      // Also clear cookie
+      sessionStorage.removeItem("token");
+      // Also clear cookie (session cookie will be cleared on close)
       document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     }
     setCheckingAuth(false);
@@ -49,11 +49,11 @@ export default function LoginPage() {
         throw new Error("Token not received");
       }
 
-      // Store token in localStorage
-      localStorage.setItem("token", token);
-      
-      // Also set as cookie for middleware to use
-      document.cookie = `token=${token}; path=/; max-age=604800`;
+      // Store token in sessionStorage (no persistent auto-login)
+      sessionStorage.setItem("token", token);
+
+      // Set session cookie (no max-age) so middleware can read it during the session
+      document.cookie = `token=${token}; path=/;`;
       
       // Redirect based on role
       if (role === "VENDOR") {

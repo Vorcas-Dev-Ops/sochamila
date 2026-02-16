@@ -576,91 +576,110 @@ function PatternRenderer({ layer }: { layer: PatternLayer }) {
       canvas.width = size * 2;
       canvas.height = size * 2;
 
-      const color1 = layer.color1 || "#000000";
-      const color2 = layer.color2 || "#FFFFFF";
+      const color1 = layer.color1 || "#000000"; // foreground
+      const color2 = layer.color2 || "#FFFFFF"; // background
 
-      // Fill background
+      // Fill background (unless transparent)
+      if (color2 !== "transparent") {
+        ctx.fillStyle = color2;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else {
+        // clear to transparent
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
       ctx.fillStyle = color1;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = color2;
 
       if (layer.patternType === "stripes") {
         for (let i = 0; i < canvas.width; i += size * 2) {
-          ctx.fillRect(i, 0, size, canvas.height);
+          if (color1 !== "transparent") ctx.fillRect(i, 0, size, canvas.height);
         }
       } else if (layer.patternType === "dots") {
         const dotSize = size / 3;
-        for (let x = dotSize; x < canvas.width; x += size) {
-          for (let y = dotSize; y < canvas.height; y += size) {
-            ctx.beginPath();
-            ctx.arc(x, y, dotSize, 0, Math.PI * 2);
-            ctx.fill();
+        if (color1 !== "transparent") {
+          for (let x = dotSize; x < canvas.width; x += size) {
+            for (let y = dotSize; y < canvas.height; y += size) {
+              ctx.beginPath();
+              ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+              ctx.fill();
+            }
           }
         }
       } else if (layer.patternType === "checkerboard") {
-        for (let x = 0; x < canvas.width; x += size) {
-          for (let y = 0; y < canvas.height; y += size) {
-            if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
-              ctx.fillRect(x, y, size, size);
+        if (color1 !== "transparent") {
+          for (let x = 0; x < canvas.width; x += size) {
+            for (let y = 0; y < canvas.height; y += size) {
+              if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
+                ctx.fillRect(x, y, size, size);
+              }
             }
           }
         }
       } else if (layer.patternType === "grid") {
-        ctx.strokeStyle = color2;
+        ctx.strokeStyle = color1;
         ctx.lineWidth = 1;
-        for (let i = 0; i < canvas.width; i += size) {
-          ctx.beginPath();
-          ctx.moveTo(i, 0);
-          ctx.lineTo(i, canvas.height);
-          ctx.stroke();
-        }
-        for (let i = 0; i < canvas.height; i += size) {
-          ctx.beginPath();
-          ctx.moveTo(0, i);
-          ctx.lineTo(canvas.width, i);
-          ctx.stroke();
+        if (color1 !== "transparent") {
+          for (let i = 0; i < canvas.width; i += size) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, canvas.height);
+            ctx.stroke();
+          }
+          for (let i = 0; i < canvas.height; i += size) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(canvas.width, i);
+            ctx.stroke();
+          }
         }
       } else if (layer.patternType === "diagonal") {
-        ctx.strokeStyle = color2;
+        ctx.strokeStyle = color1;
         ctx.lineWidth = 1;
-        for (let i = -canvas.height; i < canvas.width; i += size * 1.5) {
-          ctx.beginPath();
-          ctx.moveTo(i, 0);
-          ctx.lineTo(i + canvas.height, canvas.height);
-          ctx.stroke();
+        if (color1 !== "transparent") {
+          for (let i = -canvas.height; i < canvas.width; i += size * 1.5) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i + canvas.height, canvas.height);
+            ctx.stroke();
+          }
         }
       } else if (layer.patternType === "waves") {
-        ctx.strokeStyle = color2;
+        ctx.strokeStyle = color1;
         ctx.lineWidth = 2;
-        for (let x = 0; x < canvas.width; x += size * 2) {
-          ctx.beginPath();
-          for (let i = 0; i < canvas.height; i++) {
-            const y = (Math.sin((i + x) / (size / 2)) * (size / 2)) + (size / 2);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x + i / (canvas.height / size), y);
+        if (color1 !== "transparent") {
+          for (let x = 0; x < canvas.width; x += size * 2) {
+            ctx.beginPath();
+            for (let i = 0; i < canvas.height; i++) {
+              const y = (Math.sin((i + x) / (size / 2)) * (size / 2)) + (size / 2);
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x + i / (canvas.height / size), y);
+            }
+            ctx.stroke();
           }
-          ctx.stroke();
         }
       } else if (layer.patternType === "hexagon") {
-        ctx.strokeStyle = color2;
+        ctx.strokeStyle = color1;
         ctx.lineWidth = 1;
         const hexSize = size / 2;
-        for (let x = 0; x < canvas.width; x += size * 1.5) {
-          for (let y = 0; y < canvas.height; y += size * 1.5) {
-            drawHexagon(ctx, x + hexSize, y + hexSize, hexSize);
+        if (color1 !== "transparent") {
+          for (let x = 0; x < canvas.width; x += size * 1.5) {
+            for (let y = 0; y < canvas.height; y += size * 1.5) {
+              drawHexagon(ctx, x + hexSize, y + hexSize, hexSize);
+            }
           }
         }
       } else if (layer.patternType === "triangle") {
-        ctx.fillStyle = color2;
-        for (let x = 0; x < canvas.width; x += size) {
-          for (let y = 0; y < canvas.height; y += size) {
-            ctx.beginPath();
-            ctx.moveTo(x + size / 2, y);
-            ctx.lineTo(x + size, y + size);
-            ctx.lineTo(x, y + size);
-            ctx.closePath();
-            ctx.fill();
+        if (color1 !== "transparent") {
+          ctx.fillStyle = color1;
+          for (let x = 0; x < canvas.width; x += size) {
+            for (let y = 0; y < canvas.height; y += size) {
+              ctx.beginPath();
+              ctx.moveTo(x + size / 2, y);
+              ctx.lineTo(x + size, y + size);
+              ctx.lineTo(x, y + size);
+              ctx.closePath();
+              ctx.fill();
+            }
           }
         }
       }
@@ -679,8 +698,8 @@ function PatternRenderer({ layer }: { layer: PatternLayer }) {
     opacity: layer.opacity ?? 1,
     backgroundImage: patternUrl ? `url(${patternUrl})` : undefined,
     backgroundRepeat: "repeat",
-    backgroundSize: "auto",
-    backgroundColor: layer.color1,
+    backgroundSize: layer.scale ? `${layer.scale}px ${layer.scale}px` : "auto",
+    backgroundColor: layer.color2 === "transparent" ? "transparent" : layer.color2,
   };
 
   return (

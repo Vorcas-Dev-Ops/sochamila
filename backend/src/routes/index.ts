@@ -17,6 +17,9 @@ console.log("[ROUTES-INDEX] vendorRoutes import successful:", vendorRoutes);
 
 const router = Router();
 
+console.log("[ROUTES-INDEX] Mounting AI routes...");
+router.use("/ai", aiRoutes);
+
 console.log("[ROUTES-INDEX] Mounting authentication routes...");
 router.use("/auth", authRoutes);
 

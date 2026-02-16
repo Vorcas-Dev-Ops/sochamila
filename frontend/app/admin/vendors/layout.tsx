@@ -24,7 +24,7 @@ export default function VendorLayout({
   /* Allow ADMIN (managing vendors) or VENDOR (own dashboard) */
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (!token) {
       console.log("[VENDOR] No token found, redirecting to login");
       router.replace("/login");
@@ -35,7 +35,7 @@ export default function VendorLayout({
       const decoded = jwtDecode<JwtPayload>(token);
       if (decoded.exp * 1000 < Date.now()) {
         console.log("[VENDOR] Token expired");
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         router.replace("/login");
         return;
@@ -43,7 +43,7 @@ export default function VendorLayout({
       // Allow both ADMIN (managing vendors) and VENDOR (own dashboard)
       if (decoded.role !== "ADMIN" && decoded.role !== "VENDOR") {
         console.log("[VENDOR] User role is not ADMIN or VENDOR, redirecting. Role:", decoded.role);
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         router.replace("/");
         return;
@@ -52,7 +52,7 @@ export default function VendorLayout({
       setAuthChecked(true);
     } catch (error) {
       console.error("[VENDOR] Auth check error:", error);
-      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       router.replace("/login");
     }
@@ -63,7 +63,7 @@ export default function VendorLayout({
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (!window.location.pathname.startsWith("/admin/vendors")) {
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       }
     };
@@ -81,7 +81,7 @@ export default function VendorLayout({
 
     inactivityTimeoutRef.current = setTimeout(() => {
       console.log("Inactivity timeout - logging out vendor");
-      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       router.replace("/login");
     }, INACTIVITY_TIMEOUT);

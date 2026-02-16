@@ -22,7 +22,7 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const token = typeof window !== "undefined" ? sessionStorage.getItem("token") : null;
     if (!token) {
       setIsLoggedIn(false);
       return;

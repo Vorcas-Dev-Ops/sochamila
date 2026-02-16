@@ -10,11 +10,15 @@ import customerRoutes from "../modules/customer/customer.routes";
 import orderRoutes from "../modules/orders/order.routes";
 import imagekitAuthRoutes from "./imagekit-auth";
 import uploadRoutes from "./upload";
+import aiRoutes from "../modules/ai/ai.routes";
 
 console.log("[ROUTES-INDEX] Starting route initialization...");
 console.log("[ROUTES-INDEX] vendorRoutes import successful:", vendorRoutes);
 
 const router = Router();
+
+console.log("[ROUTES-INDEX] Mounting AI routes...");
+router.use("/ai", aiRoutes);
 
 console.log("[ROUTES-INDEX] Mounting authentication routes...");
 router.use("/auth", authRoutes);

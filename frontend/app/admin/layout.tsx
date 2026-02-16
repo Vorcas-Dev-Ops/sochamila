@@ -44,7 +44,7 @@ export default function AdminLayout({
   /* Require login; if no token or expired, clear and redirect to login (re-login) */
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (!token) {
       console.log("[ADMIN] No token found, redirecting to login");
       router.replace("/login");
@@ -57,7 +57,7 @@ export default function AdminLayout({
       // Check token expiration
       if (decoded.exp * 1000 < Date.now()) {
         console.log("[ADMIN] Token expired");
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         router.replace("/login");
         return;
@@ -66,7 +66,7 @@ export default function AdminLayout({
       // Check admin role
       if (decoded.role !== "ADMIN") {
         console.log("[ADMIN] User role is not ADMIN, redirecting. Role:", decoded.role);
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         router.replace("/");
         return;
@@ -76,7 +76,7 @@ export default function AdminLayout({
       setAuthChecked(true);
     } catch (error) {
       console.error("[ADMIN] Auth check error:", error);
-      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       router.replace("/login");
     }
@@ -88,7 +88,7 @@ export default function AdminLayout({
     const handleBeforeUnload = () => {
       // Check if navigating away from /admin
       if (!window.location.pathname.startsWith("/admin")) {
-        localStorage.removeItem("token");
+        sessionStorage.removeItem("token");
         document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       }
     };
@@ -107,7 +107,7 @@ export default function AdminLayout({
 
     inactivityTimeoutRef.current = setTimeout(() => {
       console.log("Inactivity timeout - logging out");
-      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       router.replace("/login");
     }, INACTIVITY_TIMEOUT);
@@ -176,7 +176,7 @@ export default function AdminLayout({
   /* ================= LOGOUT ================= */
 
   const logout = () => {
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     router.replace("/login");
   };
 

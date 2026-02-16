@@ -19,6 +19,8 @@ export default function LoginPage() {
     const token = localStorage.getItem("token");
     if (token) {
       localStorage.removeItem("token");
+      // Also clear cookie
+      document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     }
     setCheckingAuth(false);
   }, []);
@@ -40,14 +42,29 @@ export default function LoginPage() {
         password,
       });
 
-      const token = response?.data?.token;
+      const token = response?.data?.data?.token;
+      const role = response?.data?.data?.user?.role;
 
       if (!token) {
         throw new Error("Token not received");
       }
 
+      // Store token in localStorage
       localStorage.setItem("token", token);
-      router.push("/admin");
+      
+      // Also set as cookie for middleware to use
+      document.cookie = `token=${token}; path=/; max-age=604800`;
+      
+      // Redirect based on role
+      if (role === "VENDOR") {
+        router.push("/admin/vendors/dashboard");
+      } else if (role === "ADMIN") {
+        router.push("/admin");
+      } else if (role === "CUSTOMER") {
+        router.push("/");
+      } else {
+        router.push("/");
+      }
     } catch (err: any) {
       if (err?.response?.status === 401) {
         setError("Invalid email or password");

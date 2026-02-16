@@ -3,7 +3,8 @@ import type { NextRequest } from "next/server";
 import { jwtDecode } from "jwt-decode";
 
 type JwtPayload = {
-  role: "ADMIN" | "VENDOR" | "CUSTOMER";
+  role: "ADMIN" | "VENDOR" | "CUSTOMER" | "DESIGNER";
+  id: string;
   exp: number;
 };
 
@@ -22,9 +23,21 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
-    // Role check
-    if (decoded.role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/", req.url));
+    // Role-based route access
+    const pathname = req.nextUrl.pathname;
+
+    // Admin routes - only ADMIN role
+    if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/vendors")) {
+      if (decoded.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
+    }
+
+    // Vendor routes - only VENDOR role
+    if (pathname.startsWith("/admin/vendors")) {
+      if (decoded.role !== "VENDOR") {
+        return NextResponse.redirect(new URL("/", req.url));
+      }
     }
   } catch {
     return NextResponse.redirect(new URL("/login", req.url));

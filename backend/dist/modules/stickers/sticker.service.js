@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.remove = exports.toggle = exports.upload = exports.getAll = void 0;
+exports.remove = exports.moveToCategory = exports.toggle = exports.upload = exports.getAll = void 0;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 /* ===============================
    GET ALL STICKERS
@@ -11,7 +11,13 @@ const prisma_1 = __importDefault(require("../../lib/prisma"));
 const getAll = () => {
     return prisma_1.default.sticker.findMany({
         include: {
-            category: true,
+            category: {
+                include: {
+                    _count: {
+                        select: { stickers: true },
+                    },
+                },
+            },
         },
         orderBy: {
             createdAt: "desc",
@@ -33,6 +39,15 @@ const upload = async (files, categoryId) => {
                 connect: { id: categoryId }, // ✅ CORRECT PRISMA RELATION
             },
         },
+        include: {
+            category: {
+                include: {
+                    _count: {
+                        select: { stickers: true },
+                    },
+                },
+            },
+        },
     })));
 };
 exports.upload = upload;
@@ -51,9 +66,41 @@ const toggle = async (id) => {
         data: {
             isActive: !sticker.isActive,
         },
+        include: {
+            category: {
+                include: {
+                    _count: {
+                        select: { stickers: true },
+                    },
+                },
+            },
+        },
     });
 };
 exports.toggle = toggle;
+/* ===============================
+   MOVE TO CATEGORY
+================================ */
+const moveToCategory = async (id, categoryId) => {
+    return prisma_1.default.sticker.update({
+        where: { id },
+        data: {
+            category: {
+                connect: { id: categoryId },
+            },
+        },
+        include: {
+            category: {
+                include: {
+                    _count: {
+                        select: { stickers: true },
+                    },
+                },
+            },
+        },
+    });
+};
+exports.moveToCategory = moveToCategory;
 /* ===============================
    DELETE STICKER
 ================================ */

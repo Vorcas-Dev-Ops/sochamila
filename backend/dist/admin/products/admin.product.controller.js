@@ -231,10 +231,11 @@ const deleteProduct = async (req, res) => {
     }
     catch (error) {
         console.error("DELETE PRODUCT ERROR:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Failed to delete product",
-        });
+        const msg = error?.message || "Failed to delete product";
+        if (msg.includes("associated orders")) {
+            return res.status(400).json({ success: false, message: msg });
+        }
+        return res.status(500).json({ success: false, message: "Failed to delete product" });
     }
 };
 exports.deleteProduct = deleteProduct;

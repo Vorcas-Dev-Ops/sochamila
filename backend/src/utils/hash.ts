@@ -1,12 +1,25 @@
 import bcrypt from "bcryptjs";
 
 export const hashPassword = async (password: string) => {
-  return await bcrypt.hash(password, 10);
+  try {
+    return await bcrypt.hash(password, 10);
+  } catch (error) {
+    console.error("Hash error:", error);
+    throw error;
+  }
 };
 
 export const comparePassword = async (
   password: string,
   hash: string
 ) => {
-  return await bcrypt.compare(password, hash);
+  try {
+    console.log("Comparing password. Hash exists:", !!hash, "Password length:", password.length);
+    const result = await bcrypt.compare(password, hash);
+    console.log("Password comparison result:", result);
+    return result;
+  } catch (error) {
+    console.error("Compare password error:", error);
+    throw error;
+  }
 };

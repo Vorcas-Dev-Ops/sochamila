@@ -2,6 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPublicProductById = exports.getAllPublicProducts = void 0;
 const prisma_1 = require("../../config/prisma");
+/* ======================================================
+   TYPES
+====================================================== */
 const VIEW_BY_ORDER = ["FRONT", "BACK", "LEFT", "RIGHT"];
 /* ======================================================
    FORMAT PRODUCT FOR SHOP FRONTEND
@@ -11,17 +14,17 @@ const formatProduct = (product) => {
     const productImages = (product.images ?? [])
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
         .map((img, index) => ({
-            image: img.imageUrl,
-            view: VIEW_BY_ORDER[index] ?? VIEW_BY_ORDER[0],
-        }));
+        image: img.imageUrl,
+        view: VIEW_BY_ORDER[index] ?? VIEW_BY_ORDER[0],
+    }));
     const variants = product.colors?.flatMap((color) => color.sizes?.map((size) => {
         // Color images: assign view by sortOrder (0=FRONT, 1=BACK, 2=LEFT, 3=RIGHT)
         const colorImages = (color.images ?? [])
             .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
             .map((img, index) => ({
-                image: img.imageUrl,
-                view: VIEW_BY_ORDER[index] ?? VIEW_BY_ORDER[0],
-            }));
+            image: img.imageUrl,
+            view: VIEW_BY_ORDER[index] ?? VIEW_BY_ORDER[0],
+        }));
         return {
             id: size.id,
             color: color.name,
@@ -50,40 +53,51 @@ const formatProduct = (product) => {
 /* ======================================================
    GET ALL PUBLIC PRODUCTS (SHOP PAGE)
 ====================================================== */
-const getAllPublicProducts = async () => {
-    const products = await prisma_1.prisma.product.findMany({
-        where: {
-            isActive: true,
-            isAvailable: true,
-        },
-        orderBy: {
-            createdAt: "desc",
-        },
-        include: {
-            // Product-level images
-            images: {
-                orderBy: { sortOrder: "asc" },
+const getAllPublicProducts = async (page = 1, limit = 10) => {
+    const skip = (page - 1) * limit;
+    const [products, total] = await Promise.all([
+        prisma_1.prisma.product.findMany({
+            where: {
+                isActive: true,
+                isAvailable: true,
             },
-            colors: {
-                include: {
-                    // Color-specific images
-                    images: {
-                        orderBy: { sortOrder: "asc" },
-                    },
-                    sizes: {
-                        where: {
-                            isActive: true,
-                            stock: { gt: 0 },
+            orderBy: {
+                createdAt: "desc",
+            },
+            take: limit,
+            skip,
+            include: {
+                // Product-level images
+                images: {
+                    orderBy: { sortOrder: "asc" },
+                },
+                colors: {
+                    include: {
+                        // Color-specific images
+                        images: {
+                            orderBy: { sortOrder: "asc" },
                         },
-                        orderBy: {
-                            price: "asc",
+                        sizes: {
+                            where: {
+                                isActive: true,
+                                stock: { gt: 0 },
+                            },
+                            orderBy: {
+                                price: "asc",
+                            },
                         },
                     },
                 },
             },
-        },
-    });
-    return products.map(formatProduct);
+        }),
+        prisma_1.prisma.product.count({
+            where: {
+                isActive: true,
+                isAvailable: true,
+            },
+        }),
+    ]);
+    return { items: products.map(formatProduct), total };
 };
 exports.getAllPublicProducts = getAllPublicProducts;
 /* ======================================================

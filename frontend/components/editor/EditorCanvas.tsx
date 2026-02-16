@@ -1,15 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 
 import {
   EditorLayer,
   Side,
   TextLayer,
+  ImageLayer,
+  StickerLayer,
+  PatternLayer,
   isTextLayer,
+  isImageLayer,
+  isStickerLayer,
+  isPatternLayer,
 } from "@/types/editor";
 
+import { loadGoogleFont } from "@/utils/loadGoogleFont";
 import { PRINT_PROFILES } from "@/config/printProfiles";
 
 /* ======================================================
@@ -94,19 +101,23 @@ function resolveProductImage(
    COMPONENT
 ====================================================== */
 
-export default function EditorCanvas({
-  product,
-  side,
-  selectedColor,
-  layers,
-  selectedLayerId,
-  setSelectedLayerId,
-  updateLayer,
-  deleteLayer,
-}: EditorCanvasProps) {
+const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
+  function EditorCanvas({
+    product,
+    side,
+    selectedColor,
+    layers,
+    selectedLayerId,
+    setSelectedLayerId,
+    updateLayer,
+    deleteLayer,
+  }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] =
     useState(CANVAS_SIZE);
+
+  /* ================= FORWARD REF ================= */
+  useImperativeHandle(ref, () => containerRef.current as HTMLDivElement);
 
   /* ================= DELETE KEY ================= */
 
@@ -286,7 +297,7 @@ export default function EditorCanvas({
                 >
                   {selected && (
                     <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-50">
-                      {layer.type === "text" ? "TEXT" : "IMAGE"} · {layer.rotation || 0}°
+                      {isTextLayer(layer) ? "TEXT" : isImageLayer(layer) || isStickerLayer(layer) ? "IMAGE" : "PATTERN"} · {layer.rotation || 0}°
                     </div>
                   )}
                   <div
@@ -297,7 +308,7 @@ export default function EditorCanvas({
                   >
                     {isTextLayer(layer) ? (
                       <EnhancedText layer={layer} />
-                    ) : (
+                    ) : isImageLayer(layer) || isStickerLayer(layer) ? (
                       <img
                         src={layer.src}
                         className="w-full h-full object-contain"
@@ -306,6 +317,8 @@ export default function EditorCanvas({
                         }}
                         draggable={false}
                       />
+                    ) : (
+                      <PatternRenderer layer={layer} />
                     )}
                   </div>
                 </Rnd>
@@ -330,27 +343,61 @@ export default function EditorCanvas({
       </div>
     </div>
   );
-}
+  }
+);
+
+export default EditorCanvas;
 
 /* ======================================================
    TEXT
 ====================================================== */
 
 function EnhancedText({ layer }: { layer: TextLayer }) {
+  const [fontLoaded, setFontLoaded] = useState(true);
+
+  useEffect(() => {
+    setFontLoaded(false);
+    loadGoogleFont(layer.fontFamily);
+    
+    // Force re-render after font loads to apply new font
+    const timer = setTimeout(() => {
+      setFontLoaded(true);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [layer.fontFamily]);
+
+  // Properly format the CSS font family string with quotes for multi-word fonts
+  const fontFamilyCSS = layer.fontFamily.includes(" ") 
+    ? `"${layer.fontFamily}", "Noto Sans", sans-serif`
+    : `${layer.fontFamily}, "Noto Sans", sans-serif`;
+
   const style: React.CSSProperties = {
-    fontFamily: layer.fontFamily,
+    fontFamily: fontFamilyCSS,
     fontSize: `${layer.fontSize}px`,
     fontWeight: layer.fontWeight,
+    fontStyle: layer.isItalic ? "italic" : "normal",
+    textDecoration: [
+      layer.isUnderline ? "underline" : "",
+      layer.isStrikethrough ? "line-through" : ""
+    ].filter(Boolean).join(" ") || "none",
     letterSpacing: `${layer.letterSpacing ?? 0}px`,
     lineHeight: layer.lineHeight ?? 1.2,
     textAlign: layer.textAlign || "center",
     whiteSpace: "pre-wrap",
     color: layer.color,
     opacity: layer.opacity ?? 1,
+    WebkitFontSmoothing: "antialiased",
+    MozOsxFontSmoothing: "grayscale",
   };
 
+  // Apply text style effects
   if (layer.textStyle === "shadow") {
-    style.textShadow = "3px 3px 6px rgba(0,0,0,0.4)";
+    const offsetX = layer.shadowOffsetX ?? 2;
+    const offsetY = layer.shadowOffsetY ?? 2;
+    const blur = layer.shadowBlur ?? 4;
+    const shadowCol = layer.shadowColor ?? "#000000";
+    style.textShadow = `${offsetX}px ${offsetY}px ${blur}px ${shadowCol}`;
   }
 
   if (layer.textStyle === "outline") {
@@ -364,12 +411,303 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
   }
 
   if (layer.textStyle === "3d") {
-    style.textShadow = `
-      1px 1px 0 #222,
-      2px 2px 0 #333,
-      3px 3px 0 #444
-    `;
+    const depth = layer.depth3d ?? 5;
+    const angle = (layer.angle3d ?? 45) * Math.PI / 180;
+    const offsetX = Math.round(Math.cos(angle) * depth);
+    const offsetY = Math.round(Math.sin(angle) * depth);
+    const shadowCol = layer.shadowColor ?? "#222";
+    
+    let shadows = [];
+    for (let i = 1; i <= depth; i++) {
+      shadows.push(`${i}px ${i}px 0 rgba(0,0,0,${0.3 * (i/depth)})`);
+    }
+    style.textShadow = shadows.join(", ");
   }
 
-  return <div style={style}>{layer.text}</div>;
+  if (layer.textStyle === "glow") {
+    const glowCol = layer.glowColor ?? "#FF00FF";
+    const glowSz = layer.glowSize ?? 5;
+    style.textShadow = `0 0 ${glowSz}px ${glowCol}, 0 0 ${glowSz * 2}px ${glowCol}`;
+    style.color = "#fff";
+  }
+
+  if (layer.textStyle === "emboss") {
+    style.textShadow = `
+      -2px -2px 2px rgba(255,255,255,0.5),
+       2px  2px 2px rgba(0,0,0,0.5)
+    `;
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "neon") {
+    const glowCol = layer.glowColor ?? "#FF00FF";
+    style.textShadow = `
+      0 0 10px ${glowCol},
+      0 0 20px ${glowCol},
+      0 0 30px ${glowCol}
+    `;
+    style.color = "#fff";
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "gradient") {
+    const startCol = layer.gradientStart ?? "#FF0000";
+    const endCol = layer.gradientEnd ?? "#0000FF";
+    const angle = layer.gradientAngle ?? 0;
+    
+    style.backgroundImage = `linear-gradient(${angle}deg, ${startCol}, ${endCol})`;
+    style.backgroundClip = "text";
+    style.WebkitBackgroundClip = "text";
+    style.WebkitTextFillColor = "transparent";
+    style.color = "transparent" as any;
+  }
+
+  if (layer.textStyle === "chrome") {
+    style.backgroundImage = "linear-gradient(45deg, #C0C0C0, #E8E8E8, #C0C0C0, #E8E8E8)";
+    style.backgroundClip = "text";
+    style.WebkitBackgroundClip = "text";
+    style.WebkitTextFillColor = "transparent";
+    style.textShadow = "2px 2px 4px rgba(0,0,0,0.3)";
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "glass") {
+    style.color = "rgba(255,255,255,0.8)";
+    style.textShadow = `
+      0 0 20px rgba(255,255,255,0.5),
+      inset 0 0 20px rgba(255,255,255,0.2)
+    `;
+    style.backdropFilter = "blur(10px)" as any;
+    style.fontWeight = 300;
+    style.letterSpacing = "2px";
+  }
+
+  if (layer.textStyle === "fire") {
+    const glowCol1 = "#FF0000";
+    const glowCol2 = "#FF7F00";
+    style.color = "#FFF";
+    style.textShadow = `
+      0 0 10px ${glowCol1},
+      0 0 20px ${glowCol1},
+      0 0 30px ${glowCol2},
+      0 0 40px ${glowCol2}
+    `;
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "wave") {
+    style.textShadow = `
+      0 2px 0 #999,
+      0 4px 0 #888,
+      0 6px 0 #777,
+      0 8px 0 #666,
+      0 10px 0 #555,
+      0 12px 15px rgba(0,0,0,0.5)
+    `;
+    style.color = layer.color;
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle === "blur") {
+    style.filter = "blur(1px)";
+    style.textShadow = "0 0 10px rgba(0,0,0,0.3)";
+    style.opacity = 0.85;
+  }
+
+  if (layer.textStyle && String(layer.textStyle) === "marble") {
+    style.backgroundImage = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)";
+    style.backgroundClip = "text";
+    style.WebkitBackgroundClip = "text";
+    style.WebkitTextFillColor = "transparent";
+    style.textShadow = "2px 2px 8px rgba(0,0,0,0.2)";
+    style.fontWeight = 700;
+  }
+
+  if (layer.textStyle && String(layer.textStyle) === "plasma") {
+    const glowCol = "#FF00FF";
+    style.color = "#00FFFF";
+    style.textShadow = `
+      0 0 5px #00FFFF,
+      0 0 10px ${glowCol},
+      0 0 15px #00FF00,
+      0 0 20px #FF00FF,
+      0 0 30px #00FFFF
+    `;
+    style.fontWeight = 700;
+    style.letterSpacing = "2px";
+  }
+
+  if (layer.textStyle && String(layer.textStyle) === "hologram") {
+    style.color = "#0FF";
+    style.textShadow = `
+      0 0 10px #0FF,
+      0 0 20px #0FF,
+      -2px -2px 5px #FF00FF,
+      2px 2px 5px #FF00FF
+    `;
+    style.fontWeight = 500;
+    style.letterSpacing = "3px";
+  }
+
+  return (
+    <div style={style} key={`${layer.fontFamily}-${fontLoaded}`}>
+      {layer.text}
+    </div>
+  );
+}
+
+/* ======================================================
+   PATTERN
+====================================================== */
+
+function PatternRenderer({ layer }: { layer: PatternLayer }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [patternUrl, setPatternUrl] = useState<string>("");
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    try {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const size = Math.max(layer.scale ?? 10, 5);
+      canvas.width = size * 2;
+      canvas.height = size * 2;
+
+      const color1 = layer.color1 || "#000000";
+      const color2 = layer.color2 || "#FFFFFF";
+
+      // Fill background
+      ctx.fillStyle = color1;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = color2;
+
+      if (layer.patternType === "stripes") {
+        for (let i = 0; i < canvas.width; i += size * 2) {
+          ctx.fillRect(i, 0, size, canvas.height);
+        }
+      } else if (layer.patternType === "dots") {
+        const dotSize = size / 3;
+        for (let x = dotSize; x < canvas.width; x += size) {
+          for (let y = dotSize; y < canvas.height; y += size) {
+            ctx.beginPath();
+            ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (layer.patternType === "checkerboard") {
+        for (let x = 0; x < canvas.width; x += size) {
+          for (let y = 0; y < canvas.height; y += size) {
+            if ((Math.floor(x / size) + Math.floor(y / size)) % 2 === 0) {
+              ctx.fillRect(x, y, size, size);
+            }
+          }
+        }
+      } else if (layer.patternType === "grid") {
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += size) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, canvas.height);
+          ctx.stroke();
+        }
+        for (let i = 0; i < canvas.height; i += size) {
+          ctx.beginPath();
+          ctx.moveTo(0, i);
+          ctx.lineTo(canvas.width, i);
+          ctx.stroke();
+        }
+      } else if (layer.patternType === "diagonal") {
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = 1;
+        for (let i = -canvas.height; i < canvas.width; i += size * 1.5) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i + canvas.height, canvas.height);
+          ctx.stroke();
+        }
+      } else if (layer.patternType === "waves") {
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = 2;
+        for (let x = 0; x < canvas.width; x += size * 2) {
+          ctx.beginPath();
+          for (let i = 0; i < canvas.height; i++) {
+            const y = (Math.sin((i + x) / (size / 2)) * (size / 2)) + (size / 2);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x + i / (canvas.height / size), y);
+          }
+          ctx.stroke();
+        }
+      } else if (layer.patternType === "hexagon") {
+        ctx.strokeStyle = color2;
+        ctx.lineWidth = 1;
+        const hexSize = size / 2;
+        for (let x = 0; x < canvas.width; x += size * 1.5) {
+          for (let y = 0; y < canvas.height; y += size * 1.5) {
+            drawHexagon(ctx, x + hexSize, y + hexSize, hexSize);
+          }
+        }
+      } else if (layer.patternType === "triangle") {
+        ctx.fillStyle = color2;
+        for (let x = 0; x < canvas.width; x += size) {
+          for (let y = 0; y < canvas.height; y += size) {
+            ctx.beginPath();
+            ctx.moveTo(x + size / 2, y);
+            ctx.lineTo(x + size, y + size);
+            ctx.lineTo(x, y + size);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+      }
+
+      // Convert canvas to data URL
+      const url = canvas.toDataURL("image/png");
+      setPatternUrl(url);
+    } catch (e) {
+      console.error("Failed to generate pattern:", e);
+    }
+  }, [layer.patternType, layer.color1, layer.color2, layer.scale]);
+
+  const style: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    opacity: layer.opacity ?? 1,
+    backgroundImage: patternUrl ? `url(${patternUrl})` : undefined,
+    backgroundRepeat: "repeat",
+    backgroundSize: "auto",
+    backgroundColor: layer.color1,
+  };
+
+  return (
+    <>
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <div style={style} />
+    </>
+  );
+}
+
+/**
+ * Helper to draw hexagon on canvas
+ */
+function drawHexagon(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number
+) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = (i * Math.PI) / 3;
+    const hx = x + size * Math.cos(angle);
+    const hy = y + size * Math.sin(angle);
+    if (i === 0) ctx.moveTo(hx, hy);
+    else ctx.lineTo(hx, hy);
+  }
+  ctx.closePath();
+  ctx.stroke();
 }

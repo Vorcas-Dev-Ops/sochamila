@@ -1,9 +1,27 @@
+console.log("[APP] Starting app initialization...");
+
 import express from "express";
 import cors from "cors";
 import path from "path";
 import routes from "./routes";
+import {
+  requestIdMiddleware,
+  httpLogger,
+  performanceWarning,
+} from "./middlewares/logger";
+import {
+  globalErrorHandler,
+  notFoundHandler,
+} from "./middlewares/errorHandler";
 
 const app = express();
+
+/* ================================
+   REQUEST TRACKING
+================================ */
+app.use(requestIdMiddleware);
+app.use(httpLogger);
+app.use(performanceWarning(1000)); // Warn if request takes > 1 second
 
 /* ================================
    CORS
@@ -20,11 +38,11 @@ app.use(
 /* ================================
    BODY PARSERS
 ================================ */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 /* ================================
-   STATIC FILES (FIXED ✅)
+   STATIC FILES
 ================================ */
 app.use(
   "/uploads",
@@ -33,10 +51,15 @@ app.use(
   )
 );
 
-
 /* ================================
    API ROUTES
 ================================ */
 app.use("/api", routes);
+
+/* ================================
+   ERROR HANDLING (MUST BE LAST)
+================================ */
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
 export default app;

@@ -2,54 +2,32 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkEmailExists = exports.loginUser = exports.registerUser = void 0;
 const auth_service_1 = require("./auth.service");
+const asyncHandler_1 = require("../../utils/asyncHandler");
+const validators_1 = require("../../utils/validators");
+const response_1 = require("../../utils/response");
 /* =====================================================
    REGISTER USER
 ===================================================== */
-const registerUser = async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
-        if (!name || !email || !password) {
-            return res.status(400).json({
-                message: "Name, email and password are required",
-            });
-        }
-        const { token, user } = await (0, auth_service_1.registerUserService)({
-            name,
-            email,
-            password,
-        });
-        return res.status(201).json({
-            message: "Registration successful",
-            token,
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-            },
-        });
-    }
-    catch (error) {
-        console.error("REGISTER ERROR:", error);
-        return res.status(400).json({
-            message: error.message || "Registration failed",
-        });
-    }
-};
-exports.registerUser = registerUser;
+exports.registerUser = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const validated = validators_1.registerSchema.parse(req.body);
+    const { token, user } = await (0, auth_service_1.registerUserService)(validated);
+    return (0, response_1.sendSuccess)(res, "Registration successful", {
+        token,
+        user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+        },
+    }, 201);
+});
 /* =====================================================
    LOGIN USER (ADMIN / CUSTOMER / VENDOR)
 ===================================================== */
-const loginUser = async (req, res) => {
+exports.loginUser = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({
-                message: "Email and password are required",
-            });
-        }
-        const { token, user } = await (0, auth_service_1.loginUserService)(email, password);
-        return res.status(200).json({
-            message: "Login successful",
+        const validated = validators_1.loginSchema.parse(req.body);
+        const { token, user } = await (0, auth_service_1.loginUserService)(validated.email, validated.password);
+        return (0, response_1.sendSuccess)(res, "Login successful", {
             token,
             user: {
                 id: user.id,
@@ -59,35 +37,16 @@ const loginUser = async (req, res) => {
         });
     }
     catch (error) {
-        console.error("LOGIN ERROR:", error);
-        return res.status(401).json({
-            message: error.message || "Invalid credentials",
-        });
+        console.error("Login error:", error.message);
+        throw error;
     }
-};
-exports.loginUser = loginUser;
+});
 /* =====================================================
    CHECK EMAIL EXISTS (AJAX)
    Used during registration
 ===================================================== */
-const checkEmailExists = async (req, res) => {
-    try {
-        const { email } = req.body;
-        if (!email) {
-            return res.status(400).json({
-                message: "Email is required",
-            });
-        }
-        const exists = await (0, auth_service_1.checkEmailExistsService)(email);
-        return res.status(200).json({
-            exists,
-        });
-    }
-    catch (error) {
-        console.error("CHECK EMAIL ERROR:", error);
-        return res.status(500).json({
-            message: "Server error",
-        });
-    }
-};
-exports.checkEmailExists = checkEmailExists;
+exports.checkEmailExists = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const { email } = validators_1.checkEmailSchema.parse(req.body);
+    const exists = await (0, auth_service_1.checkEmailExistsService)(email);
+    return (0, response_1.sendSuccess)(res, "Email check completed", { exists });
+});

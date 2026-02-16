@@ -5,18 +5,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteProduct = exports.updateProductStatus = exports.updateProduct = exports.getProductById = exports.getAllProducts = exports.createProduct = void 0;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
-
 /* =====================================================
    HELPERS
 ===================================================== */
-
 // Generate unique SKU with random suffix
 const generateSKU = (productName, colorName, size) => {
     const base = `${productName.replace(/\s+/g, "-").toUpperCase()}-${colorName.replace(/\s+/g, "-").toUpperCase()}-${size.toUpperCase()}`;
     const suffix = Date.now().toString(36).slice(-4).toUpperCase() + Math.random().toString(36).slice(2, 4).toUpperCase();
     return `${base}-${suffix}`;
 };
-
 /* =====================================================
    CREATE PRODUCT
 ===================================================== */
@@ -116,6 +113,20 @@ const getAllProducts = async () => {
                     imageUrl: true,
                     sortOrder: true,
                     isPrimary: true,
+                },
+            },
+            colors: {
+                select: {
+                    id: true,
+                    name: true,
+                    images: {
+                        orderBy: { sortOrder: "asc" },
+                        select: {
+                            id: true,
+                            imageUrl: true,
+                            sortOrder: true,
+                        },
+                    },
                 },
             },
         },
@@ -322,8 +333,23 @@ exports.updateProductStatus = updateProductStatus;
    DELETE PRODUCT
 ===================================================== */
 const deleteProduct = async (id) => {
-    return prisma_1.default.product.delete({
-        where: { id },
+    // Prevent deleting products that have been ordered (order items reference sizes)
+    // Find sizes belonging to this product
+    const sizes = await prisma_1.default.productSize.findMany({
+        where: {
+            color: { productId: id },
+        },
+        select: { id: true },
     });
+    if (sizes.length > 0) {
+        const sizeIds = sizes.map((s) => s.id);
+        const linkedOrders = await prisma_1.default.orderItem.count({
+            where: { sizeId: { in: sizeIds } },
+        });
+        if (linkedOrders > 0) {
+            throw new Error("Product has associated orders and cannot be deleted");
+        }
+    }
+    return prisma_1.default.product.delete({ where: { id } });
 };
 exports.deleteProduct = deleteProduct;

@@ -32,6 +32,9 @@ router.use("/products", productRoutes); // PUBLIC PRODUCTS
 console.log("[ROUTES-INDEX] Mounting graphics routes...");
 router.use("/graphics", graphicsRoutes);
 
+console.log("[ROUTES-INDEX] Mounting AI routes...");
+router.use("/ai", aiRoutes);
+
 console.log("[ROUTES-INDEX] Mounting sticker routes...");
 router.use("/stickers", stickerRoutes);
 router.use("/sticker-categories", categoryRoutes);

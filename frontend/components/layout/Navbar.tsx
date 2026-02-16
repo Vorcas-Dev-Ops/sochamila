@@ -36,7 +36,7 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: "Create", href: "/editor" },
+    { name: "Create", href: "/configurator" },
     { name: "Shop", href: "/products" },
   ];
 

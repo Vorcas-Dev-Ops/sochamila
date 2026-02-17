@@ -272,15 +272,15 @@ export default function RightPanel({
 
           {/* Header */}
           <div className="mb-8 text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Design Preview</h2>
-            <p className="text-gray-500">Your custom design applied to all sides</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Preview Mockup</h2>
+            <p className="text-gray-500">Your edits applied to each side — use Download to save images</p>
           </div>
           
           {/* Loading State */}
           {loadingPreview && (
             <div className="flex flex-col items-center justify-center py-16">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-teal-600 mb-4"></div>
-              <p className="text-gray-600 font-medium">Capturing all sides…</p>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-teal-600 mb-4" aria-hidden />
+              <p className="text-gray-600 font-medium">Capturing your edits on each side…</p>
               <p className="text-sm text-gray-400 mt-2">This may take a few seconds</p>
             </div>
           )}
@@ -303,7 +303,7 @@ export default function RightPanel({
                     key={side} 
                     className="border-2 border-gray-200 rounded-xl overflow-hidden bg-gray-50 p-4 hover:border-teal-500 hover:shadow-lg transition-all duration-200"
                   >
-                    {/* Side Label */}
+                    {/* Side Label + Download */}
                     <div className="flex items-center justify-between mb-3">
                       <span className="font-bold text-gray-900 capitalize text-lg">
                         {side === "front" && ""}
@@ -312,11 +312,27 @@ export default function RightPanel({
                         {side === "right" && ""}
                         {" "}{side}
                       </span>
-                      {previewImages[side] && (
-                        <span className="text-xs bg-green-100 text-green-700 font-semibold px-3 py-1 rounded-full">
-                          ✓ Designed
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {previewImages[side] && (
+                          <>
+                            <span className="text-xs bg-green-100 text-green-700 font-semibold px-3 py-1 rounded-full">
+                              ✓ Designed
+                            </span>
+                            <button
+                              type="button"
+                              className="text-xs bg-teal-100 hover:bg-teal-200 text-teal-800 font-semibold px-2 py-1 rounded"
+                              onClick={() => {
+                                const link = document.createElement("a");
+                                link.href = previewImages[side]!;
+                                link.download = `mockup-${side}-${Date.now()}.png`;
+                                link.click();
+                              }}
+                            >
+                              Download
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {/* Image Container */}
@@ -357,24 +373,30 @@ export default function RightPanel({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <button 
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+                <button
                   className="flex-1 px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-all duration-200 transform active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                   onClick={() => {
-                    // Trigger download functionality
-                    Object.entries(previewImages).forEach(([side, img]) => {
-                      if (img) {
-                        const link = document.createElement('a');
+                    const timestamp = Date.now();
+                    const entries = (Object.entries(previewImages) as [Side, string | null][]).filter(
+                      (entry): entry is [Side, string] => entry[1] != null
+                    );
+                    if (entries.length === 0) return;
+                    entries.forEach(([side, img], index) => {
+                      setTimeout(() => {
+                        const link = document.createElement("a");
                         link.href = img;
-                        link.download = `design-${side}-${Date.now()}.png`;
+                        link.download = `mockup-${side}-${timestamp}.png`;
                         link.click();
-                      }
+                      }, index * 300);
                     });
                   }}
+                  disabled={!Object.values(previewImages).some(Boolean)}
                 >
                   <span>⬇</span> Download Preview
+                  <span>⬇️</span> Download all sides
                 </button>
-                <button 
+                <button
                   className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-semibold transition-all duration-200 transform active:scale-95"
                   onClick={() => setShowPreview(false)}
                 >

@@ -48,6 +48,9 @@ interface EditorCanvasProps {
   ) => void;
 
   deleteLayer: (id: string) => void;
+
+  /** When true, hide selection UI and labels so captured preview shows only the design */
+  captureMode?: boolean;
 }
 
 /* ======================================================
@@ -111,6 +114,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
     setSelectedLayerId,
     updateLayer,
     deleteLayer,
+    captureMode = false,
   }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] =
@@ -215,6 +219,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
         {productImage ? (
           <img
             src={productImage}
+            crossOrigin="anonymous"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             draggable={false}
           />
@@ -286,16 +291,16 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                     })
                   }
                   style={{
-                    outline: selected
+                    outline: !captureMode && selected
                       ? "2px solid #6366f1"
                       : "none",
                     zIndex: selected
                       ? 999
                       : layer.zIndex,
                   }}
-                  className={`${selected ? "shadow-lg ring-2 ring-indigo-500" : ""}`}
+                  className={`${!captureMode && selected ? "shadow-lg ring-2 ring-indigo-500" : ""}`}
                 >
-                  {selected && (
+                  {!captureMode && selected && (
                     <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-50">
                       {isTextLayer(layer) ? "TEXT" : isImageLayer(layer) || isStickerLayer(layer) ? "IMAGE" : "PATTERN"} · {layer.rotation || 0}°
                     </div>
@@ -311,6 +316,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                     ) : isImageLayer(layer) || isStickerLayer(layer) ? (
                       <img
                         src={layer.src}
+                        crossOrigin={layer.src.startsWith("data:") ? undefined : "anonymous"}
                         className="w-full h-full object-contain"
                         style={{
                           opacity: layer.opacity ?? 1,
@@ -327,19 +333,21 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
           </div>
         </div>
 
-        <span className="absolute top-4 right-4 bg-black text-white text-[10px] px-3 py-1 rounded-full">
-          {selectedColor.toUpperCase()} · {side.toUpperCase()}
-        </span>
-              {!selectedLayerId && (
-                <span className="absolute bottom-4 left-4 bg-gray-800 text-white text-[11px] px-3 py-1.5 rounded-lg max-w-xs">
-                  Click to select layer • Delete key to remove • Use left panel to edit
-                </span>
-              )}
-              {selectedLayerId && (
-                <span className="absolute bottom-4 left-4 bg-indigo-600 text-white text-[11px] px-3 py-1.5 rounded-lg">
-                  Drag to move • Drag edges to resize • Use left panel to rotate
-                </span>
-              )}
+        {!captureMode && (
+          <span className="absolute top-4 right-4 bg-black text-white text-[10px] px-3 py-1 rounded-full">
+            {selectedColor.toUpperCase()} · {side.toUpperCase()}
+          </span>
+        )}
+        {!captureMode && !selectedLayerId && (
+          <span className="absolute bottom-4 left-4 bg-gray-800 text-white text-[11px] px-3 py-1.5 rounded-lg max-w-xs">
+            Click to select layer • Delete key to remove • Use left panel to edit
+          </span>
+        )}
+        {!captureMode && selectedLayerId && (
+          <span className="absolute bottom-4 left-4 bg-indigo-600 text-white text-[11px] px-3 py-1.5 rounded-lg">
+            Drag to move • Drag edges to resize • Use left panel to rotate
+          </span>
+        )}
       </div>
     </div>
   );

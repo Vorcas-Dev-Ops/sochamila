@@ -42,7 +42,7 @@ export const downloadDesign = async (
   if (!canvasRef.current) return;
 
   try {
-    const html2canvas = (await import("html2canvas")).default;
+    const html2canvas = (await import("html2canvas-pro")).default;
     const canvas = await html2canvas(canvasRef.current, { backgroundColor: null });
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
@@ -62,7 +62,7 @@ export const copyDesignToClipboard = async (
   if (!canvasRef.current) return;
 
   try {
-    const html2canvas = (await import("html2canvas")).default;
+    const html2canvas = (await import("html2canvas-pro")).default;
     const canvas = await html2canvas(canvasRef.current, { backgroundColor: null });
     canvas.toBlob((blob) => {
       if (!blob) return;

@@ -24,6 +24,7 @@ type VendorForm = {
 export default function VendorRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [payoutMethod, setPayoutMethod] = useState<"BANK" | "UPI">("BANK");
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState<VendorForm>({
     firstName: "",
@@ -48,6 +49,7 @@ export default function VendorRegisterPage() {
 
   const handleSubmit = async () => {
     try {
+      setError(null); // Clear previous errors
       setLoading(true);
 
       await api.post("/vendor/register", {
@@ -58,8 +60,10 @@ export default function VendorRegisterPage() {
 
       alert("Vendor registered successfully. Await admin approval.");
       window.location.href = "/login";
-    } catch {
-      alert("Unable to submit KYC.");
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || "Unable to submit KYC.";
+      setError(errorMessage);
+      console.error("Registration error:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -138,6 +142,14 @@ export default function VendorRegisterPage() {
               <p className="text-sm text-gray-500 mb-6">
                 Fill accurate details. Fake information leads to rejection.
               </p>
+
+              {/* ERROR MESSAGE */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm font-semibold text-red-700 mb-1">Registration Error:</p>
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
 
               <div className="space-y-6">
 

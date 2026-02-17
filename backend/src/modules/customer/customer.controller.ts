@@ -3,6 +3,7 @@ import {
   getCustomerProfileService,
   getCustomerOrdersService,
   getCustomerStatsService,
+  updateCustomerProfileService,
 } from "./customer.service";
 
 /**
@@ -86,5 +87,26 @@ export async function getCustomerStats(req: Request, res: Response) {
       success: false,
       message: "Failed to fetch customer stats",
     });
+  }
+}
+
+/**
+ * Update customer profile
+ */
+export async function updateCustomerProfile(req: Request, res: Response) {
+  try {
+    const customerId = req.user?.id;
+
+    if (!customerId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { name, email, avatarUrl } = req.body;
+    const updated = await updateCustomerProfileService(customerId, { name, email, avatarUrl });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    console.error("[CUSTOMER] Error updating profile:", error);
+    res.status(500).json({ success: false, message: "Failed to update profile" });
   }
 }

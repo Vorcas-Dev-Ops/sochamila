@@ -362,7 +362,7 @@ export default function VendorDashboard() {
               />
               <ProfessionalMetricCard 
                 title="Total Earnings" 
-                value={`$${dashboardData.metrics.totalEarnings.toFixed(0)}`}
+                value={formatINR(dashboardData.metrics.totalEarnings)}
                 icon={DollarSign}
                 color="purple"
                 trend="+23%"
@@ -405,9 +405,9 @@ export default function VendorDashboard() {
                   Quick Stats
                 </h2>
                 <div className="space-y-4">
-                  <ProfessionalStatItem label="Avg. Order Value" value={`$${dashboardData.quickStats.avgOrderValue.toFixed(2)}`} icon={DollarSign} />
+                  <ProfessionalStatItem label="Avg. Order Value" value={formatINR(dashboardData.quickStats.avgOrderValue)} icon={DollarSign} />
                   <ProfessionalStatItem label="Commission Rate" value={`${dashboardData.quickStats.commissionRate}%`} icon={Percent} />
-                  <ProfessionalStatItem label="Pending Payout" value={`$${dashboardData.quickStats.pendingPayout.toFixed(2)}`} icon={Truck} />
+                  <ProfessionalStatItem label="Pending Payout" value={formatINR(dashboardData.quickStats.pendingPayout)} icon={Truck} />
                   <ProfessionalStatItem label="Store Rating" value={`${dashboardData.quickStats.storeRating}/5`} icon={Star} />
                 </div>
               </div>
@@ -467,7 +467,7 @@ export default function VendorDashboard() {
                         <td className="px-6 py-4 text-sm text-indigo-600 font-semibold">{order.orderId}</td>
                         <td className="px-6 py-4 text-sm text-slate-900">{order.customer}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">{order.items}</td>
-                        <td className="px-6 py-4 text-sm text-slate-900 font-semibold">${order.total.toFixed(2)}</td>
+                        <td className="px-6 py-4 text-sm text-slate-900 font-semibold">{formatINR(order.total)}</td>
                         <td className="px-6 py-4 text-sm">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                             order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
@@ -511,7 +511,7 @@ export default function VendorDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <ProfessionalMetricCard 
                 title="Total Sales" 
-                value={`$${statsData.totalSales.toFixed(0)}`}
+                value={formatINR(statsData.totalSales)}
                 icon={TrendingUp}
                 color="green"
                 trend="+18%"
@@ -527,7 +527,7 @@ export default function VendorDashboard() {
               />
               <ProfessionalMetricCard 
                 title="Avg Order Value" 
-                value={`$${statsData.avgOrderValue.toFixed(2)}`}
+                value={formatINR(statsData.avgOrderValue)}
                 icon={DollarSign}
                 color="purple"
                 trend="+7%"
@@ -701,6 +701,12 @@ function ProfessionalMetricCard({
   );
 }
 
+// Local INR formatter
+function formatINR(value?: number | string) {
+  const n = typeof value === 'number' ? value : parseFloat(String(value || '0'));
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(n);
+}
+
 function ProfessionalStatItem({ label, value, icon: Icon }: any) {
   return (
     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition">
@@ -739,7 +745,7 @@ function OrderItem({ orderId, status, date, amount }: any) {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <span className="text-sm font-semibold text-slate-900">${amount?.toFixed(2) || '0.00'}</span>
+        <span className="text-sm font-semibold text-slate-900">{formatINR(amount || 0)}</span>
         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(status)}`}>
           {status}
         </span>
@@ -789,11 +795,11 @@ function ProfessionalEarningRow({ month, orders, revenue, commission }: any) {
       <div className="flex justify-between items-center">
         <div>
           <p className="text-xs text-slate-600 mb-1">Revenue</p>
-          <p className="font-bold text-slate-900">${revenue.toFixed(2)}</p>
+          <p className="font-bold text-slate-900">{formatINR(revenue)}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-slate-600 mb-1">Your Commission</p>
-          <p className="font-bold text-green-600">${commission.toFixed(2)}</p>
+          <p className="font-bold text-green-600">{formatINR(commission)}</p>
         </div>
       </div>
     </div>
@@ -809,7 +815,7 @@ function ProfessionalAnalyticsRow({ product, sales, revenue }: any) {
           {sales} sales
         </span>
       </div>
-      <p className="text-lg font-bold text-slate-900">${revenue.toFixed(2)}</p>
+      <p className="text-lg font-bold text-slate-900">{formatINR(revenue)}</p>
     </div>
   );
 }

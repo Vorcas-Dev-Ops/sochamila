@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
 
 export default function RegisterPage() {
@@ -11,6 +12,8 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
   });
+
+  const router = useRouter();
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,17 +55,29 @@ export default function RegisterPage() {
       setLoading(true);
       setError("");
 
-      await api.post("/auth/register", {
+      const resp = await api.post("/auth/register", {
         name: form.name,
         email: form.email,
         password: form.password,
         role: "CUSTOMER",
       });
 
-      setSuccess(true);
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 1500);
+      const token = resp?.data?.data?.token;
+      if (!token) {
+        setError("Registration succeeded but no token received. Please login.");
+        setSuccess(true);
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1500);
+        return;
+      }
+
+      // store token in session for the session and set cookie for server-side reads
+      sessionStorage.setItem("token", token);
+      document.cookie = `token=${token}; path=/;`;
+
+      // redirect to customer dashboard
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err?.response?.data?.message || "Registration failed");
     } finally {

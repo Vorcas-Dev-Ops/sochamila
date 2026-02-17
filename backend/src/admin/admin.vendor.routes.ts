@@ -1,5 +1,4 @@
 import { Router, Request, Response } from "express";
-import { Role } from "@prisma/client";
 import prisma from "../lib/prisma";
 
 const router = Router();
@@ -8,7 +7,7 @@ const router = Router();
 router.get("/", async (req: Request, res: Response) => {
   try {
     const vendors = await prisma.user.findMany({
-      where: { role: Role.VENDOR },
+      where: { role: "VENDOR" },
       select: { id: true, name: true, email: true, kycStatus: true, isActive: true, createdAt: true },
       orderBy: { createdAt: "desc" },
     });
@@ -93,7 +92,7 @@ router.get('/:id/stats', async (req: Request, res: Response) => {
     let totalRevenue = 0;
     let totalOrders = new Set<string>();
 
-    assignedItems.forEach(item => {
+    assignedItems.forEach((item: any) => {
       // Count total orders
       totalOrders.add(item.orderId);
 

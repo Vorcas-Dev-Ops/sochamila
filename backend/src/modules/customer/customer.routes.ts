@@ -14,6 +14,19 @@ const router = Router();
    CUSTOMER ENDPOINTS (PROTECTED - CUSTOMER ROLE)
 ========================================================= */
 
+
+/**
+ * PUT /api/customer/profile
+ * @description Update customer profile (name, email)
+ * @requires CUSTOMER role
+ */
+router.put(
+  "/profile",
+  authMiddleware,
+  roleMiddleware([Role.CUSTOMER]),
+  (req: Request, res: Response) => require("./customer.controller").updateCustomerProfile(req, res)
+);
+
 /**
  * GET /api/customer/profile
  * @description Get customer profile

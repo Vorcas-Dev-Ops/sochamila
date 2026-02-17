@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/types/product";
+import api from "@/lib/axios";
+import { useAuth } from "@/lib/useAuth";
 
 /* ======================================================
    CONFIG
@@ -172,12 +174,34 @@ export default function ProductClient({
 
   /* ================= CTA ================= */
 
+  const { user, loading: authLoading } = useAuth();
+  const [addingToCart, setAddingToCart] = useState(false);
+
   const handleCreate = () => {
     if (!selectedVariant) return;
 
     router.push(
       `/editor?product=${product.id}&variant=${selectedVariant.id}`
     );
+  };
+
+  const handleAddToCart = async () => {
+    if (!selectedVariant) return;
+
+    try {
+      setAddingToCart(true);
+
+      // Go directly to checkout with product and variant info
+      // For a design-free order (e.g., blank product)
+      router.push(
+        `/checkout?product=${product.id}&variant=${selectedVariant.id}&quantity=${qty}`
+      );
+    } catch (error) {
+      console.error("Error navigating to checkout:", error);
+      alert("Error navigating to checkout. Please try again.");
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   /* ======================================================
@@ -225,7 +249,7 @@ export default function ProductClient({
           </div>
 
           {/* MAIN IMAGE */}
-          <div className="flex-1 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-gray-200 shadow-lg h-[500px]">
+          <div className="flex-1 bg-linear-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-gray-200 shadow-lg h-[500px]">
             {activeImage ? (
               <img
                 src={getImageUrl(activeImage) || undefined}
@@ -325,7 +349,7 @@ export default function ProductClient({
                   onClick={() => setSelectedSize(size)}
                   className={`px-5 py-2.5 border-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 ${
                     selectedSize === size
-                      ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white border-teal-700 shadow-md"
+                      ? "bg-linear-to-r from-teal-600 to-teal-500 text-white border-teal-700 shadow-md"
                       : "border-gray-300 text-gray-700 hover:border-teal-500 hover:bg-gray-100"
                   }`}
                 >
@@ -335,18 +359,40 @@ export default function ProductClient({
             </div>
           </div>
 
-          {/* CTA BUTTON */}
-          <button
-            disabled={!selectedVariant}
-            onClick={handleCreate}
-            className={`w-full py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg ${
-              selectedVariant
-                ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white hover:from-teal-700 hover:to-teal-600 hover:shadow-xl"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            {selectedVariant ? "🎨 Create Now" : "Select Size & Color"}
-          </button>
+          {/* CTA BUTTONS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* CREATE NOW BUTTON */}
+            <button
+              disabled={!selectedVariant}
+              onClick={handleCreate}
+              className={`py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg ${
+                selectedVariant
+                  ? "bg-linear-to-r from-teal-600 to-teal-500 text-white hover:from-teal-700 hover:to-teal-600 hover:shadow-xl"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              {selectedVariant ? "🎨 Create Now" : "Select Size"}
+            </button>
+
+            {/* CART/CHECKOUT BUTTON - Only show if size selected */}
+            {selectedVariant && (
+              <button
+                disabled={addingToCart || authLoading}
+                onClick={user ? handleAddToCart : () => router.push("/login")}
+                className="py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg bg-linear-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 hover:shadow-xl disabled:opacity-60"
+              >
+                {authLoading ? (
+                  <span>⏳ Checking...</span>
+                ) : addingToCart ? (
+                  <span>⏳ Adding...</span>
+                ) : user ? (
+                  <span>🛒 Go to Checkout</span>
+                ) : (
+                  <span>🔑 Login & Checkout</span>
+                )}
+              </button>
+            )}
+          </div>
 
           {/* DESCRIPTION */}
           {product.description && (

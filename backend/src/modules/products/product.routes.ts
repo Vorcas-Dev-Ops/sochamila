@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getProducts,
   getProductById,
+  getSizeById,
 } from "./product.controller";
 
 const productRouter = Router();
@@ -13,6 +14,10 @@ const productRouter = Router();
 // GET /api/products
 // Returns all active & available products
 productRouter.get("/", getProducts);
+
+// GET /api/products/size/:id
+// Returns a single size/variant by ID
+productRouter.get("/size/:id", getSizeById);
 
 // GET /api/products/:id
 // Returns a single product by ID

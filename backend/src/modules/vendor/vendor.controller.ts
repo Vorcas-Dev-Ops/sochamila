@@ -126,7 +126,7 @@ export async function getVendorStats(req: Request, res: Response) {
 export async function updateOrderStatus(req: Request, res: Response) {
   try {
     const vendorId = req.user?.id;
-    const orderId = req.params.orderId;
+    const orderId = typeof req.params.orderId === "string" ? req.params.orderId : "";
     const { status } = req.body;
 
     if (!vendorId) {
@@ -261,7 +261,7 @@ export async function getVendorAssignedDesigns(req: Request, res: Response) {
       success: true,
       data: designs,
       totalAssignedDesigns: designs.length,
-      designsWithFiles: designs.filter((d) => d.hasDesigns).length,
+      designsWithFiles: designs.filter((d: any) => d.hasDesigns).length,
     });
   } catch (error: any) {
     console.error("[VENDOR-CONTROLLER] Error fetching assigned designs:", error);

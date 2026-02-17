@@ -78,10 +78,10 @@ export default function RightPanel({
   getPreviewImages,
 }: RightPanelProps) {
   const sideLabels: Record<Side, string> = {
-    front: "👕 Front",
-    back: "🔄 Back",
-    left: "⬅ Left",
-    right: "➡ Right",
+    front: " Front",
+    back: " Back",
+    left: " Left",
+    right: " Right",
   };
 
   const fallbackImg =
@@ -103,9 +103,9 @@ export default function RightPanel({
     setShowPreview(true);
     try {
       if (getPreviewImages) {
-        console.log("🎬 Starting preview capture...");
+        console.log(" Starting preview capture...");
         const images = await getPreviewImages();
-        console.log("📸 Preview capture complete:", images);
+        console.log(" Preview capture complete:", images);
         
         // Show images regardless - user can see what captured and what didn't
         setPreviewImages(images);
@@ -113,7 +113,7 @@ export default function RightPanel({
         throw new Error("Preview not available");
       }
     } catch (err: any) {
-      console.error("❌ Preview error:", err);
+      console.error(" Preview error:", err);
       setPreviewError(err?.message || "Failed to generate preview");
     } finally {
       setLoadingPreview(false);
@@ -190,15 +190,15 @@ export default function RightPanel({
             </p>
             <div className="space-y-2 ml-5">
               <p>
-                📍 <span className="font-semibold">Side:</span>{" "}
+                 <span className="font-semibold">Side:</span>{" "}
                 <span className="text-blue-700 font-bold text-sm uppercase bg-blue-200 px-2 py-0.5 rounded">{activeSide}</span>
               </p>
               <p>
-                🎨 <span className="font-semibold">Color:</span>{" "}
+                 <span className="font-semibold">Color:</span>{" "}
                 <span className="text-blue-700 font-bold text-sm capitalize bg-blue-200 px-2 py-0.5 rounded">{selectedColor}</span>
               </p>
               <p>
-                📦 <span className="font-semibold">Layers:</span>{" "}
+                 <span className="font-semibold">Layers:</span>{" "}
                 <span className="text-blue-700 font-bold inline-block bg-blue-200 px-2 py-0.5 rounded">{layerCount}</span>
               </p>
               {selectedLayerId && (
@@ -224,11 +224,11 @@ export default function RightPanel({
       {/* BOTTOM */}
       <div className="space-y-3 border-t border-gray-200 pt-4">
         <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition-all duration-200 transform active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base" title="Export your design as an image">
-          <span>✨</span> Export Design
+          <span></span> Export Design
         </button>
 
         <button className="w-full bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-xl font-bold transition-all duration-200 transform active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base" title="Add this design to your cart">
-          <span>🛍️</span> Add to Cart
+          <span></span> Add to Cart
         </button>
 
         <button
@@ -236,7 +236,7 @@ export default function RightPanel({
           onClick={handlePreview}
           disabled={loadingPreview}
         >
-          <span>👁️</span> Preview Mockup
+          <span></span> Preview Mockup
           {loadingPreview && <span className="animate-spin">⟳</span>}
         </button>
 
@@ -306,10 +306,10 @@ export default function RightPanel({
                     {/* Side Label + Download */}
                     <div className="flex items-center justify-between mb-3">
                       <span className="font-bold text-gray-900 capitalize text-lg">
-                        {side === "front" && "👕"}
-                        {side === "back" && "🔄"}
-                        {side === "left" && "⬅️"}
-                        {side === "right" && "➡️"}
+                        {side === "front" && ""}
+                        {side === "back" && ""}
+                        {side === "left" && ""}
+                        {side === "right" && ""}
                         {" "}{side}
                       </span>
                       <div className="flex items-center gap-2">
@@ -393,6 +393,7 @@ export default function RightPanel({
                   }}
                   disabled={!Object.values(previewImages).some(Boolean)}
                 >
+                  <span>⬇</span> Download Preview
                   <span>⬇️</span> Download all sides
                 </button>
                 <button

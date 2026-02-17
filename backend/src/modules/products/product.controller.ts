@@ -55,3 +55,31 @@ export const getProductById = asyncHandler(async (req: Request, res: Response) =
     return sendError(res, "Failed to fetch product", 500);
   }
 });
+
+/* ======================================================
+   GET SIZE BY ID (for checkout page)
+====================================================== */
+
+export const getSizeById = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id?.trim();
+
+  if (!id) {
+    return sendError(res, "Size ID is required", 400);
+  }
+
+  try {
+    const size = await productService.getSizeById(id);
+
+    if (!size) {
+      return sendError(res, "Size not found", 404);
+    }
+
+    return sendSuccess(res, "Size fetched successfully", size);
+  } catch (error: any) {
+    console.error("GET SIZE ERROR:", error);
+    if (error.message && error.message.includes("Can't reach database")) {
+      return sendError(res, "Database unavailable", 503);
+    }
+    return sendError(res, "Failed to fetch size", 500);
+  }
+});

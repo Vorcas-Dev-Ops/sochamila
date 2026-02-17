@@ -1,7 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { roleMiddleware } from "../../middlewares/role.middleware";
-import { Role } from "@prisma/client";
 import {
   getVendorDashboard,
   getVendorOrders,
@@ -9,6 +8,7 @@ import {
   updateOrderStatus,
   getVendorAssignedDesigns,
 } from "./vendor.controller";
+import { vendorRegister } from "../auth/auth.controller";
 
 const router = Router({ mergeParams: true, caseSensitive: false });
 
@@ -27,6 +27,15 @@ router.use((req: Request, res: Response, next: NextFunction) => {
 /* =========================================================
    VENDOR ENDPOINTS (PROTECTED - VENDOR ROLE ONLY)
 ========================================================= */
+
+/**
+ * POST /api/vendor/register
+ * @description Register a new vendor with KYC details
+ * @public No authentication required
+ * @body { firstName, lastName, email, phone, password, vendorType, aadhaar, pan, gst, payoutMethod, accountNumber, ifsc, upiId }
+ * @returns JWT token and vendor info
+ */
+router.post("/register", vendorRegister);
 
 /**
  * GET /api/vendor/health
@@ -49,7 +58,7 @@ router.get("/health", (req: Request, res: Response) => {
 router.get(
   "/dashboard",
   authMiddleware,
-  roleMiddleware([Role.VENDOR, Role.ADMIN]),
+  roleMiddleware(["VENDOR", "ADMIN"]),
   (req: Request, res: Response) => getVendorDashboard(req, res)
 );
 
@@ -62,7 +71,7 @@ router.get(
 router.get(
   "/orders",
   authMiddleware,
-  roleMiddleware([Role.VENDOR, Role.ADMIN]),
+  roleMiddleware(["VENDOR", "ADMIN"]),
   (req: Request, res: Response) => getVendorOrders(req, res)
 );
 
@@ -75,7 +84,7 @@ router.get(
 router.get(
   "/stats",
   authMiddleware,
-  roleMiddleware([Role.VENDOR, Role.ADMIN]),
+  roleMiddleware(["VENDOR", "ADMIN"]),
   (req: Request, res: Response) => getVendorStats(req, res)
 );
 
@@ -89,7 +98,7 @@ router.get(
 router.patch(
   "/orders/:orderId",
   authMiddleware,
-  roleMiddleware([Role.VENDOR, Role.ADMIN]),
+  roleMiddleware(["VENDOR", "ADMIN"]),
   (req: Request, res: Response) => updateOrderStatus(req, res)
 );
 
@@ -102,7 +111,7 @@ router.patch(
 router.get(
   "/assigned-designs",
   authMiddleware,
-  roleMiddleware([Role.VENDOR, Role.ADMIN]),
+  roleMiddleware(["VENDOR", "ADMIN"]),
   (req: Request, res: Response) => getVendorAssignedDesigns(req, res)
 );
 

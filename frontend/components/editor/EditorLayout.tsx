@@ -6,7 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 import { nanoid } from "nanoid";
 
 import EditorCanvas from "./EditorCanvas";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
 
@@ -57,6 +57,7 @@ export default function EditorLayout({
   const [activeSide, setActiveSide] = useState<Side>("front");
   const [selectedLayerId, setSelectedLayerId] =
     useState<string | null>(null);
+  const [isCapturingPreview, setCapturingPreview] = useState(false);
 
   const selectedColor = variant.color ?? "default";
 
@@ -304,105 +305,71 @@ export default function EditorLayout({
       right: null,
     };
 
-    console.log("📷 getPreviewImages called, canvasRef:", canvasRef.current);
+    setCapturingPreview(true);
+    await new Promise((r) => setTimeout(r, 250));
 
-    // Helper to wait for images to load in element
-    const waitForImages = async (element: HTMLElement | null, timeout = 2000) => {
+    const waitForPaint = () =>
+      new Promise<void>((r) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => r());
+        });
+      });
+
+    const waitForImages = async (element: HTMLElement | null, timeout = 3000) => {
       if (!element) return;
       const images = element.querySelectorAll("img");
-      const count = images.length;
-      if (!count) {
-        console.log("✓ No product images to wait for");
-        return;
-      }
-      
-      console.log(`⏳ Waiting for ${count} image(s) to load...`);
-
-      const promises = Array.from(images).map(
-        (img, idx) =>
-          new Promise<void>((resolve) => {
-            if (img.complete) {
-              console.log(`  ✓ Image ${idx + 1}/${count} already complete`);
-              resolve();
-            } else {
-              img.onload = () => {
-                console.log(`  ✓ Image ${idx + 1}/${count} loaded`);
-                resolve();
-              };
-              img.onerror = () => {
-                console.log(`  ⚠ Image ${idx + 1}/${count} failed to load`);
-                resolve();
-              };
-              setTimeout(() => {
-                console.log(`  ⚠ Image ${idx + 1}/${count} timeout`);
-                resolve();
-              }, timeout);
-            }
-          })
+      if (!images.length) return;
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise<void>((resolve) => {
+              if (img.complete) resolve();
+              else {
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+                setTimeout(resolve, timeout);
+              }
+            })
+        )
       );
-
-      await Promise.all(promises);
-      console.log("✓ All images ready");
     };
+
+    let lastError: string | null = null;
 
     try {
       for (const side of sides) {
-        console.log(`\n🔄 Capturing ${side} side...`);
-        
-        // Switch to this side
         setActiveSide(side);
-        
-        // Wait for the canvas to re-render and images to load
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        await waitForPaint();
+        await new Promise((r) => setTimeout(r, 400));
         await waitForImages(canvasRef.current);
 
-        if (!canvasRef.current) {
-          console.warn(`  ⚠ Canvas ref is null for ${side}`);
-          continue;
-        }
+        if (!canvasRef.current) continue;
 
         try {
           const element = canvasRef.current;
-          console.log(`  📐 Capturing element:`, {
-            tag: element.tagName,
-            width: element.offsetWidth,
-            height: element.offsetHeight,
-            hasChildren: element.children.length,
-          });
-
           const canvas = await html2canvas(element, {
             backgroundColor: "#ffffff",
             scale: 2,
             useCORS: true,
-            allowTaint: true,
-            imageTimeout: 5000,
+            allowTaint: false,
+            imageTimeout: 8000,
             logging: false,
           });
-          
           const dataUrl = canvas.toDataURL("image/png");
           previews[side] = dataUrl;
-          
-          console.log(`  ✅ Successfully captured ${side} (${dataUrl.length} bytes)`);
         } catch (err) {
-          console.error(`  ❌ Failed to capture ${side}:`, err);
+          lastError = err instanceof Error ? err.message : String(err);
           previews[side] = null;
         }
       }
-    } catch (err) {
-      console.error("❌ Preview capture error:", err);
+    } finally {
+      setCapturingPreview(false);
+      setActiveSide("front");
     }
 
-    // Switch back to front side
-    console.log("\n↩️  Switching back to front side");
-    setActiveSide("front");
-
-    console.log("📊 Final previews:", {
-      front: previews.front ? `${previews.front.length} bytes` : "null",
-      back: previews.back ? `${previews.back.length} bytes` : "null",
-      left: previews.left ? `${previews.left.length} bytes` : "null",
-      right: previews.right ? `${previews.right.length} bytes` : "null",
-    });
-
+    if (lastError && !Object.values(previews).some(Boolean)) {
+      throw new Error(`Preview failed: ${lastError}`);
+    }
     return previews;
   };
 
@@ -435,6 +402,7 @@ export default function EditorLayout({
         deleteLayer={deleteLayer}
         selectedLayerId={selectedLayerId}
         setSelectedLayerId={setSelectedLayerId}
+        captureMode={isCapturingPreview}
       />
 
       <RightPanel

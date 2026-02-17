@@ -42,18 +42,18 @@ export async function getVendorDashboardService(vendorId: string) {
     // Calculate metrics
     const assignedOrders = orders.length;
     const pendingDispatch = orders.filter(
-      (o) => o.status === "PRINTING" || o.status === "CONFIRMED"
+      (o: any) => o.status === "PRINTING" || o.status === "CONFIRMED"
     ).length;
-    const completedOrders = orders.filter((o) => o.status === "DELIVERED").length;
+    const completedOrders = orders.filter((o: any) => o.status === "DELIVERED").length;
 
     // Calculate earnings from vendor's items
     let totalEarnings = 0;
     try {
-      totalEarnings = orders.reduce((sum, order) => {
+      totalEarnings = orders.reduce((sum: number, order: any) => {
         const vendorItems = order.items.filter(
-          (item) => item.vendorId === vendorId
+          (item: any) => item.vendorId === vendorId
         );
-        const itemTotal = vendorItems.reduce((itemSum, item) => {
+        const itemTotal = vendorItems.reduce((itemSum: number, item: any) => {
           const price = item.price ? Number(item.price) : 0;
           return itemSum + price;
         }, 0);
@@ -74,7 +74,7 @@ export async function getVendorDashboardService(vendorId: string) {
     try {
       avgOrderValue =
         orders.length > 0
-          ? orders.reduce((sum, order) => sum + Number(order.totalAmount), 0) /
+          ? orders.reduce((sum: number, order: any) => sum + Number(order.totalAmount), 0) /
             orders.length
           : 0;
     } catch (err) {
@@ -112,7 +112,7 @@ export async function getVendorDashboardService(vendorId: string) {
       });
       
       if (reviews.length > 0) {
-        const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+        const totalRating = reviews.reduce((sum: number, review: any) => sum + review.rating, 0);
         storeRating = Math.round((totalRating / reviews.length) * 10) / 10;
       }
     } catch (err) {
@@ -129,7 +129,7 @@ export async function getVendorDashboardService(vendorId: string) {
         completedOrders,
         totalEarnings: Math.round(totalEarnings * 100) / 100,
       },
-      recentOrders: recentOrders.map((order) => ({
+      recentOrders: recentOrders.map((order: any) => ({
         id: order.id,
         orderId: order.id.slice(0, 8).toUpperCase(),
         status: order.status,
@@ -204,7 +204,7 @@ export async function getVendorOrdersService(vendorId: string) {
 
     console.log("[VENDOR-SERVICE] Found", orders.length, "orders");
 
-    const result = orders.map((order) => ({
+    const result = orders.map((order: any) => ({
       orderId: order.id.slice(0, 8).toUpperCase(),
       customer: order.user?.name || "N/A",
       email: order.user?.email || "N/A",
@@ -212,7 +212,7 @@ export async function getVendorOrdersService(vendorId: string) {
       total: Math.round(Number(order.totalAmount) * 100) / 100,
       status: order.status,
       date: order.createdAt.toISOString(),
-      itemDetails: order.items.map((item) => ({
+      itemDetails: order.items.map((item: any) => ({
         id: item.id,
         product: item.size?.color?.product?.name || "Unknown Product",
         quantity: item.quantity,
@@ -264,7 +264,7 @@ export async function getVendorStatsService(vendorId: string) {
 
     // Group by month
     const monthlyData = new Map<string, { orders: number; revenue: number }>();
-    orders.forEach((order) => {
+    orders.forEach((order: any) => {
       const month = order.createdAt.toLocaleString("default", {
         year: "numeric",
         month: "long",
@@ -288,7 +288,7 @@ export async function getVendorStatsService(vendorId: string) {
     }));
 
     // Calculate totals
-    const totalSales = orders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const totalSales = orders.reduce((sum: number, o: any) => sum + Number(o.totalAmount), 0);
     const conversionRate = orders.length > 0 ? (orders.length / (orders.length + 10)) * 100 : 0;
     const avgOrderValue = orders.length > 0 ? totalSales / orders.length : 0;
 

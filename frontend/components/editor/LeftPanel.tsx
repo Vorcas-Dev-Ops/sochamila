@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FONT_GROUPS, type FontGroup } from "@/fonts/fontCatalog";
 import { loadGoogleFont } from "@/utils/loadGoogleFont";
 
@@ -65,13 +65,16 @@ function CollapsibleSection({
   children,
 }: CollapsibleSectionProps) {
   return (
-    <div className="border rounded overflow-hidden">
+    <div className="border rounded-md overflow-hidden bg-white shadow-sm">
       <button
         onClick={onToggle}
-        className="w-full px-3 py-2 bg-slate-50 hover:bg-slate-100 flex items-center justify-between transition font-semibold text-sm"
+        className="w-full px-3 py-2 flex items-center justify-between transition font-semibold text-sm bg-white hover:bg-slate-50"
       >
-        <span>{title}</span>
-        <span className={`transform transition-transform ${isOpen ? "rotate-180" : ""}`}>
+        <span className="flex items-center gap-2">
+          <span className="text-slate-500 text-xs">▸</span>
+          <span>{title}</span>
+        </span>
+        <span className={`transform transition-transform text-slate-400 ${isOpen ? "rotate-180" : ""}`}>
           ▼
         </span>
       </button>
@@ -455,23 +458,24 @@ export default function LeftPanel({
   ====================================================== */
 
   return (
-    <aside className="w-[320px] h-full border-r bg-white p-4 overflow-y-auto space-y-5">
+    <aside className="w-[280px] sm:w-[320px] lg:w-[360px] h-full border-r bg-white p-3 overflow-y-auto space-y-6">
 
       <h2 className="text-lg font-semibold">Design Tools</h2>
 
       {/* TABS */}
-      <div className="grid grid-cols-5 gap-2 text-xs">
-        {(["text", "image", "graphics", "stickers", "ai"] as Tab[]).map(t => (
+      <div className="flex gap-2 text-xs sm:text-sm items-center">
+        {(["text", "image", "graphics", "stickers", "ai"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`py-2 rounded font-semibold ${
+            className={`flex-none py-1 px-2 sm:px-3 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
               activeTab === t
-                ? "bg-indigo-600 text-white"
-                : "bg-slate-100"
+                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
+                : "bg-slate-100 hover:bg-slate-200"
             }`}
+            style={{ lineHeight: 1 }}
           >
-            {t.toUpperCase()}
+            <span className="uppercase tracking-wide text-[11px]">{t}</span>
           </button>
         ))}
       </div>
@@ -905,13 +909,14 @@ export default function LeftPanel({
           >
             <div className="space-y-3">
               {/* Drag and Drop Zone */}
-              <div
-                ref={dragRef}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center transition-all cursor-pointer hover:border-indigo-500"
-              >
+                  <div
+                    ref={dragRef}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className="border-2 border-dashed border-slate-300 rounded-lg p-5 text-center transition-all cursor-pointer hover:border-indigo-400 bg-gradient-to-b from-white/60 to-slate-50"
+                    style={{ boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.02)' }}
+                  >
                 <input
                   ref={uploadRef}
                   hidden
@@ -925,7 +930,7 @@ export default function LeftPanel({
                 />
 
                 <div className="space-y-2">
-                  <div className="text-3xl">📸</div>
+                      <div className="text-3xl">📷</div>
                   <div>
                     <p className="text-sm font-semibold text-slate-900">Drag and drop image</p>
                     <p className="text-xs text-slate-500">or click to browse</p>

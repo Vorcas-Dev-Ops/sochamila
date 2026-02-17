@@ -182,3 +182,32 @@ export const getPublicProductById = async (
 
   return product ? formatProduct(product) : null;
 };
+
+/* ======================================================
+   GET SIZE BY ID (for checkout page)
+====================================================== */
+
+export const getSizeById = async (
+  sizeId: string
+): Promise<{ id: string; sizeId: string; size: string; price: number } | null> => {
+  if (!sizeId) return null;
+
+  const size = await prisma.productSize.findUnique({
+    where: { id: sizeId },
+    select: {
+      id: true,
+      size: true,
+      price: true,
+      sku: true,
+    },
+  });
+
+  if (!size) return null;
+
+  return {
+    id: size.id,
+    sizeId: size.id, // Include both for compatibility
+    size: size.size,
+    price: size.price,
+  };
+};

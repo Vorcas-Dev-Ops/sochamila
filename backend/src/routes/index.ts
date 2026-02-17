@@ -7,9 +7,11 @@ import stickerRoutes from "../modules/stickers/sticker.routes";
 import categoryRoutes from "../modules/stickers/category.routes";
 import vendorRoutes from "../modules/vendor/vendor.routes";
 import customerRoutes from "../modules/customer/customer.routes";
+import userRoutes from "../modules/users/user.routes";
 import orderRoutes from "../modules/orders/order.routes";
 import imagekitAuthRoutes from "./imagekit-auth";
 import uploadRoutes from "./upload";
+import wishlistRoutes from "../modules/wishlist/wishlist.routes";
 import aiRoutes from "../modules/ai/ai.routes";
 
 console.log("[ROUTES-INDEX] Starting route initialization...");
@@ -57,6 +59,9 @@ router.use((req: Request, res: Response, next: NextFunction) => {
 console.log("[ROUTES-INDEX] Mounting customer routes...");
 router.use("/customer", customerRoutes);
 
+console.log("[ROUTES-INDEX] Mounting user routes...");
+router.use("/users", userRoutes);
+
 console.log("[ROUTES-INDEX] Mounting order routes...");
 router.use("/orders", orderRoutes);
 
@@ -65,6 +70,9 @@ router.use("/imagekit-auth", imagekitAuthRoutes);
 
 console.log("[ROUTES-INDEX] Mounting upload routes...");
 router.use("/uploads", uploadRoutes);
+
+console.log("[ROUTES-INDEX] Mounting wishlist routes...");
+router.use("/wishlist", wishlistRoutes);
 
 // Debug middleware to log all requests
 router.use((req: Request, res: Response, next: NextFunction) => {

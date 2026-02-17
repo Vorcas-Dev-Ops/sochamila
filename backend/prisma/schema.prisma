@@ -102,7 +102,23 @@ model User {
   role     Role    @default(CUSTOMER)
   isActive Boolean @default(true)
 
-  kycStatus VendorKycStatus?
+  // Vendor KYC Fields
+  kycStatus         VendorKycStatus?
+  firstName         String?
+  lastName          String?
+  phone             String?
+  vendorType        String?
+  
+  // Vendor KYC Documents
+  aadhaar           String? @unique
+  pan               String? @unique
+  gst               String?
+  
+  // Vendor Payout Details
+  payoutMethod      String? // "BANK" or "UPI"
+  accountNumber     String?
+  ifsc              String?
+  upiId             String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

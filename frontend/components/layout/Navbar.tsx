@@ -107,7 +107,7 @@ export default function Navbar() {
           )}
           {isLoggedIn && (
             <Link
-              href="/admin"
+              href="/dashboard"
               className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
             >
               <LayoutDashboard size={18} />
@@ -219,7 +219,7 @@ export default function Navbar() {
               )}
               {isLoggedIn && (
                 <Link
-                  href="/admin"
+                  href="/dashboard"
                   className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
                   onClick={() => setMobileOpen(false)}
                 >

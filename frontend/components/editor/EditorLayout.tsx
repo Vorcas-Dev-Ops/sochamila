@@ -9,6 +9,7 @@ import EditorCanvas from "./EditorCanvas";
 import html2canvas from "html2canvas-pro";
 import LeftPanel from "./LeftPanel";
 import RightPanel from "./RightPanel";
+import IconSidebar from "./IconSidebar";
 
 import {
   EditorLayer,
@@ -21,6 +22,9 @@ import {
 import { TextOptions } from "@/types/editor-options";
 import type { ProductVariantImage } from "@/types/product";
 import { generateImage } from "@/lib/api/ai";
+import { useCart } from "@/lib/cart";
+
+type ToolTab = "products" | "designs" | "text" | "upload" | "ai";
 
 /* ================= HELPERS ================= */
 
@@ -45,7 +49,18 @@ export default function EditorLayout({
   product,
   variant,
 }: {
-  product: { id: string; type?: string };
+  product: { 
+    id: string; 
+    type?: string;
+    variants?: Array<{
+      id: string;
+      color: string;
+      size: string;
+      price: number;
+      stock: number;
+      images?: ProductVariantImage[];
+    }>;
+  };
   variant: {
     id: string;
     color?: string;
@@ -58,13 +73,59 @@ export default function EditorLayout({
   const [selectedLayerId, setSelectedLayerId] =
     useState<string | null>(null);
   const [isCapturingPreview, setCapturingPreview] = useState(false);
+  const [activeToolTab, setActiveToolTab] = useState<ToolTab>("text");
+  const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(true);
 
   const selectedColor = variant.color ?? "default";
+  const { addToCart } = useCart();
 
   const editorImages = useMemo(
     () => buildEditorImages(variant.images),
     [variant.images]
   );
+
+  // Extract available sizes and colors from product variants
+  const { availableSizes, availableColors } = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) {
+      return { 
+        availableSizes: ["XS", "S", "M", "L", "XL", "XXL"], 
+        availableColors: [] 
+      };
+    }
+    
+    const sizes = [...new Set(product.variants.map(v => v.size))].sort();
+    const colors = [...new Map(product.variants.map(v => [v.color.toLowerCase(), { 
+      name: v.color, 
+      hex: getColorHex(v.color) 
+    }])).values()];
+    
+    return { availableSizes: sizes, availableColors: colors };
+  }, [product.variants]);
+
+  // Helper to get hex color from color name
+  function getColorHex(colorName: string): string {
+    const colorMap: Record<string, string> = {
+      white: "#FFFFFF",
+      black: "#000000",
+      gray: "#6B7280",
+      red: "#EF4444",
+      blue: "#3B82F6",
+      green: "#10B981",
+      yellow: "#F59E0B",
+      purple: "#8B5CF6",
+      pink: "#EC4899",
+      orange: "#F97316",
+      navy: "#1E3A8A",
+      brown: "#92400E",
+      beige: "#F5F5DC",
+      cream: "#FFFDD0",
+      offwhite: "#F9FAFB",
+      maroon: "#7F1D1D",
+      teal: "#14B8A6",
+      olive: "#65A30D",
+    };
+    return colorMap[colorName.toLowerCase()] || "#CCCCCC";
+  }
 
   const selectedLayer = useMemo(
     () => layers.find(l => l.id === selectedLayerId) ?? null,
@@ -373,47 +434,210 @@ export default function EditorLayout({
     return previews;
   };
 
+  // Map ToolTab to LeftPanel's Tab
+  const mapToolToTab = (tool: ToolTab): "text" | "image" | "graphics" | "stickers" | "ai" => {
+    switch (tool) {
+      case "text": return "text";
+      case "upload": return "image";
+      case "ai": return "ai";
+      case "designs": return "graphics";
+      default: return "text";
+    }
+  };
+
+  const handleToolTabChange = (tab: ToolTab) => {
+    setActiveToolTab(tab);
+    if (tab === "products") {
+      // Could open product selector modal
+      return;
+    }
+    setIsToolsPanelOpen(true);
+  };
+
   return (
-    <div className="h-screen flex bg-[#f4f5f7] overflow-hidden relative">
-      <LeftPanel
-        selectedLayer={selectedLayer}
-        onAddText={onAddText}
-        onUpdateText={onUpdateText}
-        onAddImage={onAddImage}
-        onUpdateImage={onUpdateImage}
-        onAddPattern={onAddPattern}
-        onUpdatePattern={onUpdatePattern}
-        lastPatternId={lastPatternId}
-        onUpdatePatternById={onUpdatePatternById}
-        onGenerateAIImage={onGenerateAIImage}
-      />
+    <div className="h-screen flex flex-col lg:flex-row bg-[#f4f5f7] overflow-hidden relative">
+      {/* Mobile Header */}
+      <div className="lg:hidden h-14 bg-white border-b flex items-center justify-between px-4 shrink-0">
+        <h1 className="font-semibold text-lg">Design Studio</h1>
+        <button 
+          onClick={() => setIsToolsPanelOpen(!isToolsPanelOpen)}
+          className="p-2 rounded-lg hover:bg-gray-100"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
 
-      <EditorCanvas
-        ref={canvasRef}
-        product={{
-          type: product.type,
-          images: editorImages,
-          imagesWithView: editorImages,
-        }}
-        side={activeSide}
-        selectedColor={selectedColor}
-        layers={layers}
-        updateLayer={updateLayer}
-        deleteLayer={deleteLayer}
-        selectedLayerId={selectedLayerId}
-        setSelectedLayerId={setSelectedLayerId}
-        captureMode={isCapturingPreview}
-      />
+      {/* Icon Sidebar - Hidden on mobile, shown on lg */}
+      <div className="hidden lg:block">
+        <IconSidebar 
+          activeTab={activeToolTab} 
+          onTabChange={handleToolTabChange} 
+        />
+      </div>
 
-      <RightPanel
-        product={{ images: editorImages }}
-        selectedColor={selectedColor}
-        activeSide={activeSide}
-        setActiveSide={setActiveSide}
-        layerCount={layers.length}
-        selectedLayerId={selectedLayerId}
-        getPreviewImages={getPreviewImages}
-      />
+      {/* Mobile Tools Panel Overlay */}
+      {isToolsPanelOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={() => setIsToolsPanelOpen(false)}
+          />
+          {/* Mobile Tools Panel */}
+          <div className="lg:hidden fixed inset-y-0 left-0 w-[280px] bg-white z-50 shadow-xl">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="font-semibold">Tools</h2>
+              <button onClick={() => setIsToolsPanelOpen(false)}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Mobile Icon Menu */}
+            <div className="p-4 grid grid-cols-3 gap-2">
+              {["text", "image", "graphics", "ai"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setActiveToolTab(tab as ToolTab);
+                    if (tab !== "products") {
+                      setIsToolsPanelOpen(true);
+                    }
+                  }}
+                  className={`p-3 rounded-lg text-sm capitalize ${
+                    activeToolTab === tab ? "bg-indigo-100 text-indigo-600" : "bg-gray-50"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Desktop Tools Panel */}
+      {isToolsPanelOpen && activeToolTab !== "products" && (
+        <div className="hidden lg:block">
+          <LeftPanel
+            selectedLayer={selectedLayer}
+            onAddText={onAddText}
+            onUpdateText={onUpdateText}
+            onAddImage={onAddImage}
+            onUpdateImage={onUpdateImage}
+            onAddPattern={onAddPattern}
+            onUpdatePattern={onUpdatePattern}
+            lastPatternId={lastPatternId}
+            onUpdatePatternById={onUpdatePatternById}
+            onGenerateAIImage={onGenerateAIImage}
+            initialTab={mapToolToTab(activeToolTab)}
+            onClose={() => setIsToolsPanelOpen(false)}
+          />
+        </div>
+      )}
+
+      {/* Main Canvas Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Bar - Hidden on mobile */}
+        <div className="hidden lg:flex h-14 bg-white border-b items-center justify-between px-4 shrink-0">
+          <div className="flex items-center gap-4">
+            <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+              <span className="text-sm">Support</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+              </svg>
+              <span className="text-sm">Save</span>
+            </button>
+            <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              <span className="text-sm">Share</span>
+            </button>
+            <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+              <span className="text-sm">Full screen</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Canvas & Right Panel Container */}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          {/* Canvas - Full width on mobile, flex-1 on desktop */}
+          <div className="flex-1 min-h-0">
+            <EditorCanvas
+              ref={canvasRef}
+              product={{
+                type: product.type,
+                images: editorImages,
+                imagesWithView: editorImages,
+              }}
+              side={activeSide}
+              selectedColor={selectedColor}
+              layers={layers}
+              updateLayer={updateLayer}
+              deleteLayer={deleteLayer}
+              selectedLayerId={selectedLayerId}
+              setSelectedLayerId={setSelectedLayerId}
+              captureMode={isCapturingPreview}
+              availableSides={["front", "back", "left", "right"]}
+              onSideChange={setActiveSide}
+            />
+          </div>
+
+          {/* Right Panel - Bottom sheet on mobile, sidebar on desktop */}
+          <div className="lg:w-80 h-32 lg:h-auto shrink-0">
+            <RightPanel
+              product={{ id: product.id, name: (product as any).name, images: editorImages }}
+              selectedColor={selectedColor}
+              activeSide={activeSide}
+              setActiveSide={setActiveSide}
+              layerCount={layers.length}
+              selectedLayerId={selectedLayerId}
+              getPreviewImages={getPreviewImages}
+              availableSizes={availableSizes}
+              availableColors={availableColors}
+              variants={product.variants}
+              onAddToCart={(variantId, productName, selectedSize, selectedColor, price) => {
+                // Find the variant details
+                const selectedVariant = product.variants?.find(v => v.id === variantId);
+                
+                if (!selectedVariant) {
+                  alert("Error: Variant not found");
+                  return;
+                }
+                
+                // Add to cart
+                addToCart({
+                  productId: product.id,
+                  variantId: variantId,
+                  quantity: 1,
+                  price: price,
+                  name: productName,
+                  size: selectedSize,
+                  color: selectedColor,
+                  imageUrl: variant.images?.[0]?.image || "/placeholder.png",
+                });
+                
+                alert(`${productName} (${selectedSize}, ${selectedColor}) added to cart!`);
+                // Redirect to checkout page
+                window.location.href = "/checkout";
+              }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

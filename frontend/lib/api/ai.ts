@@ -25,11 +25,34 @@ interface GenerateImageResponse {
 export async function generateAIImage(
   options: GenerateImageRequest
 ): Promise<GenerateImageResponse> {
-  const response = await api.post<GenerateImageResponse>(
-    "/ai/generate",
-    options
-  );
-  return response.data;
+  // Validate prompt before sending
+  const { prompt } = options;
+  if (!prompt || !prompt.trim()) {
+    throw new Error("Prompt is required");
+  }
+  if (prompt.trim().length < 3) {
+    throw new Error("Prompt must be at least 3 characters");
+  }
+  if (prompt.length > 1000) {
+    throw new Error("Prompt must be less than 1000 characters");
+  }
+
+  try {
+    const response = await api.post<GenerateImageResponse>(
+      "/ai/generate",
+      { prompt: prompt.trim(), model: options.model }
+    );
+    return response.data;
+  } catch (error: any) {
+    // Extract error message from response
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error);
+    }
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    throw error;
+  }
 }
 
 /**

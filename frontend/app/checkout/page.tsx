@@ -21,6 +21,7 @@ function CheckoutPageContent() {
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showLoginNotification, setShowLoginNotification] = useState(false);
   const [quantity, setQuantity] = useState(parseInt(quantityParam || "1"));
   const [variantData, setVariantData] = useState<any>(null);
   const [productData, setProductData] = useState<any>(null);
@@ -132,25 +133,83 @@ function CheckoutPageContent() {
     const newVariant = product.variants?.find((v: any) => v.size === newSize);
     if (!newVariant) return;
 
-    // Remove current item and add new one with different size
-    removeFromCart(itemId);
+    // Check if an item with the new size already exists in cart
+    const existingItemWithNewSize = cartItems.find(
+      i => i.productId === item.productId && i.variantId === newVariant.id
+    );
+
+    if (existingItemWithNewSize && existingItemWithNewSize.id !== itemId) {
+      // If the new size already exists, merge quantities and remove the old item
+      updateQuantity(existingItemWithNewSize.id, existingItemWithNewSize.quantity + item.quantity);
+      removeFromCart(itemId);
+    } else {
+      // Otherwise, just update the size of the current item
+      removeFromCart(itemId);
+      addToCart({
+        productId: item.productId,
+        variantId: newVariant.id,
+        quantity: item.quantity,
+        price: newVariant.price,
+        name: item.name,
+        size: newSize,
+        color: item.color,
+        imageUrl: item.imageUrl
+      });
+    }
+  };
+
+  const handleAddAnotherSize = (itemId: string) => {
+    const item = cartItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    const product = productDataMap.get(item.productId);
+    if (!product || !product.variants) return;
+
+    // Find available sizes that are not already in cart for this product
+    const cartVariantIds = cartItems
+      .filter(i => i.productId === item.productId)
+      .map(i => i.variantId);
+    
+    const availableVariants = product.variants.filter(
+      (v: any) => !cartVariantIds.includes(v.id)
+    );
+
+    if (availableVariants.length === 0) {
+      setError("All available sizes for this product are already in your cart.");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+
+    // Add the first available size with quantity 1
+    const newVariant = availableVariants[0];
     addToCart({
       productId: item.productId,
       variantId: newVariant.id,
-      quantity: item.quantity,
+      quantity: 1,
       price: newVariant.price,
       name: item.name,
-      size: newSize,
+      size: newVariant.size,
       color: item.color,
       imageUrl: item.imageUrl
     });
+  };
+
+  const getAvailableSizesForProduct = (productId: string) => {
+    const product = productDataMap.get(productId);
+    if (!product || !product.variants) return [];
+
+    const cartVariantIds = cartItems
+      .filter(i => i.productId === productId)
+      .map(i => i.variantId);
+
+    return product.variants.filter((v: any) => !cartVariantIds.includes(v.id));
   };
 
   async function handlePlaceOrder() {
     // Get user from token
     const token = sessionStorage.getItem("token") || localStorage.getItem("token");
     if (!token) {
-      setError("Please login to place an order");
+      setShowLoginNotification(true);
       return;
     }
 
@@ -242,6 +301,33 @@ function CheckoutPageContent() {
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-700 font-semibold">Error</p>
           <p className="text-red-600">{error}</p>
+        </div>
+      )}
+
+      {/* LOGIN NOTIFICATION */}
+      {showLoginNotification && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="text-blue-500 text-xl">🔒</div>
+            <div className="flex-1">
+              <p className="text-blue-800 font-semibold mb-1">Login Required</p>
+              <p className="text-blue-600 text-sm mb-3">Please login to your account to place an order and complete your purchase.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => router.push("/login")}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => setShowLoginNotification(false)}
+                  className="px-4 py-2 border border-blue-300 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-100 transition"
+                >
+                  Continue Shopping
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -369,6 +455,20 @@ function CheckoutPageContent() {
                         )}
                       </div>
                     </div>
+                    {/* Add Another Size Button */}
+                    {getAvailableSizesForProduct(item.productId).length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <button
+                          onClick={() => handleAddAnotherSize(item.id)}
+                          className="flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                          </svg>
+                          Add another size ({getAvailableSizesForProduct(item.productId).length} available)
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

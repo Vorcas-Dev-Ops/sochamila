@@ -52,13 +52,51 @@ const fixImageUrl = (imageUrl: string | undefined): string | undefined => {
   return imageUrl;
 };
 
+// Get current user ID from token
+const getUserId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.id || null;
+  } catch {
+    return null;
+  }
+};
+
+// Get cart key based on user (user-specific cart for logged-in users, guest cart for others)
+const getCartKey = (): string => {
+  const userId = getUserId();
+  return userId ? `cart_${userId}` : 'cart_guest';
+};
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [cartKey, setCartKey] = useState<string>('cart_guest');
 
-  // Load cart from localStorage on mount
+  // Update cart key when user changes
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
+    const updateCartKey = () => {
+      const newCartKey = getCartKey();
+      setCartKey(newCartKey);
+    };
+
+    updateCartKey();
+
+    // Listen for storage changes (login/logout in other tabs)
+    const handleStorageChange = () => {
+      updateCartKey();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Load cart from localStorage when cartKey changes
+  useEffect(() => {
+    const savedCart = localStorage.getItem(cartKey);
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart);
@@ -70,14 +108,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems(fixedCart);
       } catch (error) {
         console.error('Failed to load cart from localStorage:', error);
+        setItems([]);
       }
+    } else {
+      setItems([]);
     }
-  }, []);
+  }, [cartKey]);
 
   // Save cart to localStorage whenever items change
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
-  }, [items]);
+    localStorage.setItem(cartKey, JSON.stringify(items));
+  }, [items, cartKey]);
 
   const addToCart = (newItem: Omit<CartItem, 'id'>) => {
     setItems(currentItems => {

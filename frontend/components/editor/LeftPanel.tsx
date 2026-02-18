@@ -45,6 +45,10 @@ interface LeftPanelProps {
   onUpdatePatternById?: (id: string, patch: Partial<any>) => void;
 
   onGenerateAIImage: (prompt: string) => Promise<string>;
+  
+  // New props for enhanced layout
+  initialTab?: Tab;
+  onClose?: () => void;
 }
 
 /* ======================================================
@@ -65,10 +69,10 @@ function CollapsibleSection({
   children,
 }: CollapsibleSectionProps) {
   return (
-    <div className="border rounded-md overflow-hidden bg-white shadow-sm">
+    <div className="bg-white">
       <button
         onClick={onToggle}
-        className="w-full px-3 py-2 flex items-center justify-between transition font-semibold text-sm bg-white hover:bg-slate-50"
+        className="w-full px-2 py-2 flex items-center justify-between transition font-semibold text-sm bg-white hover:bg-slate-50 rounded"
       >
         <span className="flex items-center gap-2">
           <span className="text-slate-500 text-xs">▸</span>
@@ -79,7 +83,7 @@ function CollapsibleSection({
         </span>
       </button>
       {isOpen && (
-        <div className="p-3 space-y-3 bg-white">
+        <div className="px-2 pb-3 space-y-3 bg-white">
           {children}
         </div>
       )}
@@ -102,23 +106,31 @@ export default function LeftPanel({
   lastPatternId,
   onUpdatePatternById,
   onGenerateAIImage,
+  initialTab = "text",
+  onClose,
 }: LeftPanelProps) {
   const uploadRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState<Tab>("text");
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   /* ================= DROPDOWN/COLLAPSIBLE STATE ================= */
 
   const [expandedSections, setExpandedSections] = useState({
     fonts: true,
-    sizing: true,
-    styling: true,
-    decorations: true,
-    effects: true,
-    textStyles: true,
+    sizing: false,
+    styling: false,
+    decorations: false,
+    effects: false,
+    textStyles: false,
     rotation: false,
     upload: true,
     imageProps: true,
+    aiGeneration: true,
+    generatedImages: false,
+    patterns: true,
+    patternProps: false,
+    graphics: true,
+    stickers: true,
   });
 
   /* ================= LOCAL UI STATE ================= */
@@ -162,6 +174,7 @@ export default function LeftPanel({
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiImages, setAiImages] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   /* ================= GRAPHICS & STICKERS STATE ================= */
 
@@ -189,6 +202,14 @@ export default function LeftPanel({
     { id: "waves", name: "Waves", icon: "∿∿" },
     { id: "hexagon", name: "Hexagon", icon: "⬡⬡" },
     { id: "triangle", name: "Triangle", icon: "▲▲" },
+    { id: "crosshatch", name: "Crosshatch", icon: "✚✚" },
+    { id: "zigzag", name: "Zigzag", icon: "⚡⚡" },
+    { id: "chevron", name: "Chevron", icon: "◄►" },
+    { id: "polka", name: "Polka", icon: "◉◉" },
+    { id: "stars", name: "Stars", icon: "★★" },
+    { id: "diamond", name: "Diamond", icon: "◆◆" },
+    { id: "vertical", name: "Vertical", icon: "▐▐" },
+    { id: "horizontal", name: "Horizontal", icon: "▬▬" },
   ];
 
   /* ================= IMAGE UPLOAD STATE ================= */
@@ -333,12 +354,24 @@ export default function LeftPanel({
   /* ================= AI HANDLER ================= */
 
   async function handleGenerateAIImage() {
-    if (!aiPrompt.trim()) return;
+    if (!aiPrompt.trim()) {
+      setAiError("Please enter a prompt");
+      return;
+    }
+
+    if (aiPrompt.trim().length < 3) {
+      setAiError("Prompt must be at least 3 characters");
+      return;
+    }
 
     try {
       setAiLoading(true);
+      setAiError(null);
       const imageUrl = await onGenerateAIImage(aiPrompt);
       setAiImages(prev => [imageUrl, ...prev]);
+    } catch (error: any) {
+      console.error("[AI] Generation error:", error);
+      setAiError(error.message || "Failed to generate image. Please try again.");
     } finally {
       setAiLoading(false);
     }
@@ -457,28 +490,31 @@ export default function LeftPanel({
      UI
   ====================================================== */
 
+  // Update activeTab when initialTab changes
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   return (
-    <aside className="w-[280px] sm:w-[320px] lg:w-[360px] h-full border-r bg-white p-3 overflow-y-auto space-y-6">
-
-      <h2 className="text-lg font-semibold">Design Tools</h2>
-
-      {/* TABS */}
-      <div className="flex gap-2 text-xs sm:text-sm items-center">
-        {(["text", "image", "graphics", "stickers", "ai"] as Tab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setActiveTab(t)}
-            className={`flex-none py-1 px-2 sm:px-3 rounded-full text-xs font-semibold transition-all flex items-center gap-2 ${
-              activeTab === t
-                ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md"
-                : "bg-slate-100 hover:bg-slate-200"
-            }`}
-            style={{ lineHeight: 1 }}
+    <aside className="w-[280px] sm:w-[300px] h-full border-r bg-white flex flex-col shadow-lg overflow-hidden">
+      {/* Header - Fixed */}
+      <div className="p-3 border-b bg-white shrink-0 flex items-center justify-between">
+        <h2 className="text-base font-semibold capitalize">{activeTab}</h2>
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 transition"
+            title="Close panel"
           >
-            <span className="uppercase tracking-wide text-[11px]">{t}</span>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
-        ))}
+        )}
       </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
 
       {/* ================= TEXT ================= */}
       {activeTab === "text" && (
@@ -1054,9 +1090,9 @@ export default function LeftPanel({
           {/* ========== AI GENERATION ========== */}
           <CollapsibleSection
             title="AI Image Generation"
-            isOpen={expandedSections.fonts}
+            isOpen={expandedSections.aiGeneration}
             onToggle={() =>
-              setExpandedSections(s => ({ ...s, fonts: !s.fonts }))
+              setExpandedSections(s => ({ ...s, aiGeneration: !s.aiGeneration }))
             }
           >
             <div className="space-y-3">
@@ -1064,9 +1100,18 @@ export default function LeftPanel({
                 rows={3}
                 value={aiPrompt}
                 className="w-full border rounded p-2 text-sm"
-                placeholder="Describe your design"
-                onChange={e => setAiPrompt(e.target.value)}
+                placeholder="Describe your design (e.g., 'a red rose on black background')"
+                onChange={e => {
+                  setAiPrompt(e.target.value);
+                  if (aiError) setAiError(null);
+                }}
               />
+
+              {aiError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                  {aiError}
+                </div>
+              )}
 
               <button
                 onClick={handleGenerateAIImage}
@@ -1081,9 +1126,9 @@ export default function LeftPanel({
           {/* ========== GENERATED IMAGES ========== */}
           <CollapsibleSection
             title="Generated Images"
-            isOpen={expandedSections.sizing}
+            isOpen={expandedSections.generatedImages}
             onToggle={() =>
-              setExpandedSections(s => ({ ...s, sizing: !s.sizing }))
+              setExpandedSections(s => ({ ...s, generatedImages: !s.generatedImages }))
             }
           >
             <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
@@ -1115,12 +1160,55 @@ export default function LeftPanel({
       {activeTab === "graphics" && (
         <section className="space-y-2">
 
+          {/* ========== GRAPHICS LIBRARY ========== */}
+          <CollapsibleSection
+            title={`Graphics (${graphics.length})`}
+            isOpen={expandedSections.graphics}
+            onToggle={() =>
+              setExpandedSections(s => ({ ...s, graphics: !s.graphics }))
+            }
+          >
+            <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
+              {graphicsLoading && (
+                <p className="col-span-2 text-sm text-center text-slate-500 py-8">
+                  Loading graphics...
+                </p>
+              )}
+
+              {!graphicsLoading && graphics.length === 0 && (
+                <p className="col-span-2 text-xs text-slate-400 text-center py-8">
+                  No graphics available
+                </p>
+              )}
+
+              {graphics.map((graphic: any) => {
+                const imageUrl = graphic.imageUrl.startsWith('http') 
+                  ? graphic.imageUrl 
+                  : `http://localhost:5000${graphic.imageUrl}`;
+                return (
+                  <button
+                    key={graphic.id}
+                    onClick={() => onAddImage(graphic.imageUrl)}
+                    className="border rounded overflow-hidden hover:ring-2 ring-indigo-500 transition"
+                    title={graphic.id}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={graphic.id}
+                      className="w-full h-24 object-cover"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </CollapsibleSection>
+
           {/* ========== PATTERNS SECTION ========== */}
           <CollapsibleSection
             title="Patterns"
-            isOpen={expandedSections.fonts}
+            isOpen={expandedSections.patterns}
             onToggle={() =>
-              setExpandedSections(s => ({ ...s, fonts: !s.fonts }))
+              setExpandedSections(s => ({ ...s, patterns: !s.patterns }))
             }
           >
             <div className="space-y-4">
@@ -1260,49 +1348,6 @@ export default function LeftPanel({
               </button>
             </div>
           </CollapsibleSection>
-
-          {/* ========== GRAPHICS LIBRARY ========== */}
-          <CollapsibleSection
-            title={`Graphics (${graphics.length})`}
-            isOpen={expandedSections.styling}
-            onToggle={() =>
-              setExpandedSections(s => ({ ...s, styling: !s.styling }))
-            }
-          >
-            <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
-              {graphicsLoading && (
-                <p className="col-span-2 text-sm text-center text-slate-500 py-8">
-                  Loading graphics...
-                </p>
-              )}
-
-              {!graphicsLoading && graphics.length === 0 && (
-                <p className="col-span-2 text-xs text-slate-400 text-center py-8">
-                  No graphics available
-                </p>
-              )}
-
-              {graphics.map((graphic: any) => {
-                const imageUrl = graphic.imageUrl.startsWith('http') 
-                  ? graphic.imageUrl 
-                  : `http://localhost:5000${graphic.imageUrl}`;
-                return (
-                  <button
-                    key={graphic.id}
-                    onClick={() => onAddImage(graphic.imageUrl)}
-                    className="border rounded overflow-hidden hover:ring-2 ring-indigo-500 transition"
-                    title={graphic.id}
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={graphic.id}
-                      className="w-full h-24 object-cover"
-                    />
-                  </button>
-                );
-              })}
-            </div>
-          </CollapsibleSection>
         </section>
       )}
 
@@ -1313,9 +1358,9 @@ export default function LeftPanel({
           {/* ========== STICKERS LIBRARY ========== */}
           <CollapsibleSection
             title={`Stickers (${stickers.length})`}
-            isOpen={expandedSections.decorations}
+            isOpen={expandedSections.stickers}
             onToggle={() =>
-              setExpandedSections(s => ({ ...s, decorations: !s.decorations }))
+              setExpandedSections(s => ({ ...s, stickers: !s.stickers }))
             }
           >
             <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto">
@@ -1354,6 +1399,7 @@ export default function LeftPanel({
           </CollapsibleSection>
         </section>
       )}
+      </div>{/* End Scrollable Content */}
     </aside>
   );
 }

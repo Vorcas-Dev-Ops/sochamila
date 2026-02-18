@@ -15,11 +15,13 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
+import { useCart } from "../../lib/cart";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { totalItems } = useCart();
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? sessionStorage.getItem("token") : null;
@@ -141,9 +143,14 @@ export default function Navbar() {
           <button className="p-2 hover:bg-gray-100 rounded-lg transition">
             <Heart size={20} className="hover:text-red-500 hover:scale-110 transition" />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition">
+          <Link href="/checkout" className="relative p-2 hover:bg-gray-100 rounded-lg transition">
             <ShoppingCart size={20} className="hover:text-indigo-600 hover:scale-110 transition" />
-          </button>
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                {totalItems > 99 ? '99+' : totalItems}
+              </span>
+            )}
+          </Link>
         </div>
 
         {/* ================= RIGHT - TABLET & MOBILE ================= */}
@@ -161,9 +168,14 @@ export default function Navbar() {
           <button className="p-2 hover:bg-gray-100 rounded-lg transition md:block hidden">
             <Heart size={20} />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition md:block hidden">
+          <Link href="/checkout" className="relative p-2 hover:bg-gray-100 rounded-lg transition md:block hidden">
             <ShoppingCart size={20} />
-          </button>
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                {totalItems > 99 ? '99+' : totalItems}
+              </span>
+            )}
+          </Link>
 
           {/* MOBILE MENU BUTTON */}
           <button
@@ -249,9 +261,14 @@ export default function Navbar() {
               <button className="flex-1 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold flex items-center justify-center gap-2">
                 <Heart size={18} /> Wishlist
               </button>
-              <button className="flex-1 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold flex items-center justify-center gap-2">
+              <Link href="/checkout" className="relative flex-1 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold flex items-center justify-center gap-2">
                 <ShoppingCart size={18} /> Cart
-              </button>
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                    {totalItems > 99 ? '99+' : totalItems}
+                  </span>
+                )}
+              </Link>
             </div>
           </div>
         </div>

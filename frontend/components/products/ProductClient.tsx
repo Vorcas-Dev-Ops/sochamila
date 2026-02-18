@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Product } from "@/types/product";
 import api from "@/lib/axios";
 import { useAuth } from "@/lib/useAuth";
+import { useCart } from "@/lib/cart";
 
 /* ======================================================
    CONFIG
@@ -13,8 +14,8 @@ import { useAuth } from "@/lib/useAuth";
 const API_URL = "http://localhost:5000";
 
 /* IMAGE URL HELPER */
-const getImageUrl = (imagePath: string | null | undefined): string | null => {
-  if (!imagePath) return null;
+const getImageUrl = (imagePath: string | null | undefined): string | undefined => {
+  if (!imagePath) return undefined;
   
   let p = String(imagePath).replace(/\\/g, "/").trim();
   p = p.replace(/^[A-Za-z]:\//, "");
@@ -117,13 +118,88 @@ export default function ProductClient({
 
   const [imageRotation, setImageRotation] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [imageLoading, setImageLoading] = useState<Set<string>>(new Set());
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [imageMetadata, setImageMetadata] = useState<Map<string, any>>(new Map());
+  const [showImageDetails, setShowImageDetails] = useState(false);
+
+  // Navigation functions for zoom modal
+  const navigateZoomImage = (direction: 'prev' | 'next') => {
+    if (!zoomImage || images.length <= 1) return;
+    const currentIndex = images.findIndex(img => img.image === zoomImage);
+    if (currentIndex === -1) return;
+
+    let newIndex;
+    if (direction === 'prev') {
+      newIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
+    } else {
+      newIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
+    }
+    setZoomImage(images[newIndex].image);
+  };
+
+  // Load image metadata
+  const loadImageMetadata = async (imagePath: string) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        setImageMetadata(prev => new Map(prev).set(imagePath, {
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          aspectRatio: (img.naturalWidth / img.naturalHeight).toFixed(2),
+          fileSize: 'Unknown', // Would need server-side info for this
+          format: imagePath.split('.').pop()?.toUpperCase() || 'Unknown'
+        }));
+      };
+      img.src = getImageUrl(imagePath) || '';
+    } catch (error) {
+      console.error('Failed to load image metadata:', error);
+    }
+  };
+
+  // Keyboard navigation for zoom modal
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!zoomImage) return;
+
+      if (e.key === 'Escape') {
+        setZoomImage(null);
+      } else if (e.key === 'ArrowLeft') {
+        navigateZoomImage('prev');
+      } else if (e.key === 'ArrowRight') {
+        navigateZoomImage('next');
+      }
+    };
+
+    if (zoomImage) {
+      document.addEventListener('keydown', handleKeyPress);
+      return () => document.removeEventListener('keydown', handleKeyPress);
+    }
+  }, [zoomImage, images]);
 
   const handleImageError = (imagePath: string) => {
     setFailedImages(prev => new Set(prev).add(imagePath));
+    setImageLoading(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(imagePath);
+      return newSet;
+    });
     console.error('[ProductClient] Image failed to load:', imagePath, {
       normalizedUrl: getImageUrl(imagePath),
       timestamp: new Date().toISOString()
     });
+  };
+
+  const handleImageLoad = (imagePath: string) => {
+    setImageLoading(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(imagePath);
+      return newSet;
+    });
+  };
+
+  const handleImageLoadStart = (imagePath: string) => {
+    setImageLoading(prev => new Set(prev).add(imagePath));
   };
 
   useEffect(() => {
@@ -131,6 +207,16 @@ export default function ProductClient({
       setActiveImage(images[0].image);
       setImageRotation(0);
       setFailedImages(new Set());
+      setImageLoading(new Set());
+      setZoomImage(null);
+
+      // Load metadata for all images
+      images.forEach(img => {
+        if (!imageMetadata.has(img.image)) {
+          loadImageMetadata(img.image);
+        }
+      });
+
       console.log('[ProductClient] Images for selected variant:', {
         selectedColor,
         selectedSize,
@@ -143,6 +229,7 @@ export default function ProductClient({
     } else {
       setActiveImage(null);
       setImageRotation(0);
+      setZoomImage(null);
       console.log('[ProductClient] No images for variant:', {
         selectedColor,
         selectedSize,
@@ -175,6 +262,7 @@ export default function ProductClient({
   /* ================= CTA ================= */
 
   const { user, loading: authLoading } = useAuth();
+  const { addToCart } = useCart();
   const [addingToCart, setAddingToCart] = useState(false);
 
   const handleCreate = () => {
@@ -191,14 +279,24 @@ export default function ProductClient({
     try {
       setAddingToCart(true);
 
-      // Go directly to checkout with product and variant info
-      // For a design-free order (e.g., blank product)
-      router.push(
-        `/checkout?product=${product.id}&variant=${selectedVariant.id}&quantity=${qty}`
-      );
+      // Add item to cart context
+      addToCart({
+        productId: product.id,
+        variantId: selectedVariant.id,
+        quantity: qty,
+        price: selectedVariant.price || 0,
+        name: product.name,
+        size: selectedVariant.size,
+        color: selectedVariant.color,
+        imageUrl: getImageUrl(selectedVariant.images?.[0]?.image),
+      });
+
+      // Show success message or navigate to checkout
+      // For now, we'll just add to cart and stay on the page
+      // You could add a toast notification here
     } catch (error) {
-      console.error("Error navigating to checkout:", error);
-      alert("Error navigating to checkout. Please try again.");
+      console.error("Error adding to cart:", error);
+      alert("Error adding to cart. Please try again.");
     } finally {
       setAddingToCart(false);
     }
@@ -219,26 +317,82 @@ export default function ProductClient({
             {images.length > 0 ? (
               images.map((img, i) => {
                 const imageUrl = getImageUrl(img.image);
+                const isLoading = imageLoading.has(img.image);
+                const hasFailed = failedImages.has(img.image);
+                const viewLabel = img.view ? img.view.charAt(0).toUpperCase() + img.view.slice(1).toLowerCase() : `View ${i + 1}`;
+                const altText = `${product.name} - ${selectedColor ? selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1) : 'Product'} - ${viewLabel}`;
+                const metadata = imageMetadata.get(img.image);
+                const isHighRes = metadata && metadata.width >= 1000;
+
                 return (
-                  <button
-                    key={i}
-                    onClick={() => setActiveImage(img.image)}
-                    className={`border-2 rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md ${
-                      activeImage === img.image
-                        ? "ring-2 ring-teal-600 border-teal-600 shadow-lg"
-                        : "border-gray-300 hover:border-teal-400"
-                    }`}
-                  >
-                    <img
-                      src={imageUrl || undefined}
-                      className="w-24 h-24 object-cover"
-                      alt={`Variant ${i + 1}`}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src =
-                          "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100%' height='100%' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='12'>No Image</text></svg>";
+                  <div key={i} className="relative group">
+                    <button
+                      onClick={() => {
+                        setActiveImage(img.image);
+                        setZoomImage(null);
                       }}
-                    />
-                  </button>
+                      className={`border-2 rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md relative ${
+                        activeImage === img.image
+                          ? "ring-2 ring-teal-600 border-teal-600 shadow-lg"
+                          : "border-gray-300 hover:border-teal-400"
+                      }`}
+                      title={`${viewLabel} view - Click to view details`}
+                    >
+                      {isLoading && (
+                        <div className="absolute inset-0 bg-gray-200 flex items-center justify-center z-10">
+                          <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                      {!hasFailed ? (
+                        <img
+                          src={imageUrl || undefined}
+                          className={`w-24 h-24 object-cover transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+                          alt={altText}
+                          onLoad={() => handleImageLoad(img.image)}
+                          onLoadStart={() => handleImageLoadStart(img.image)}
+                          onError={() => handleImageError(img.image)}
+                        />
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-200 flex items-center justify-center">
+                          <div className="text-xs text-gray-500 text-center p-1">
+                            Image<br/>Failed
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Quality Indicator */}
+                      {metadata && (
+                        <div className="absolute top-1 right-1">
+                          {isHighRes ? (
+                            <div className="bg-green-500 text-white text-xs px-1 py-0.5 rounded font-bold">
+                              HD
+                            </div>
+                          ) : (
+                            <div className="bg-blue-500 text-white text-xs px-1 py-0.5 rounded font-bold">
+                              SD
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Hover Details */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <div className="text-center">
+                          {metadata ? `${metadata.width}×${metadata.height}` : 'Loading...'}
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* View Label with Details */}
+                    <div className="text-xs text-gray-600 text-center mt-1 font-medium">
+                      {viewLabel}
+                      {metadata && (
+                        <div className="text-gray-500 text-xs">
+                          {metadata.width}×{metadata.height}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 );
               })
             ) : (
@@ -246,20 +400,196 @@ export default function ProductClient({
                 No images
               </div>
             )}
+
+            {/* Image Details Toggle */}
+            {images.length > 0 && (
+              <button
+                onClick={() => setShowImageDetails(!showImageDetails)}
+                className="mt-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors duration-200 flex items-center gap-2"
+              >
+                <span>📊</span>
+                <span>{showImageDetails ? 'Hide' : 'Show'} Image Details</span>
+              </button>
+            )}
+
+            {/* IMAGE DETAILS PANEL */}
+            {showImageDetails && images.length > 0 && (
+              <div className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span>🖼️</span>
+                  Product Image Details
+                </h3>
+
+                <div className="space-y-3">
+                  {images.map((img, i) => {
+                    const metadata = imageMetadata.get(img.image);
+                    const viewLabel = img.view ? img.view.charAt(0).toUpperCase() + img.view.slice(1).toLowerCase() : `View ${i + 1}`;
+                    const isHighRes = metadata && metadata.width >= 1000;
+
+                    return (
+                      <div key={i} className={`p-3 rounded-lg border transition-colors ${
+                        activeImage === img.image
+                          ? 'bg-teal-50 border-teal-300'
+                          : 'bg-white border-gray-200'
+                      }`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 mb-1">
+                              {viewLabel} View
+                            </div>
+                            <div className="text-sm text-gray-600 space-y-1">
+                              {metadata ? (
+                                <>
+                                  <div className="flex items-center gap-4">
+                                    <span>📐 {metadata.width} × {metadata.height} px</span>
+                                    <span>📏 Ratio: {metadata.aspectRatio}</span>
+                                    <span>📁 Format: {metadata.format}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      isHighRes
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {isHighRes ? 'High Resolution' : 'Standard Resolution'}
+                                    </span>
+                                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                                      {metadata.width * metadata.height > 1000000 ? 'Large' : 'Medium'} Size
+                                    </span>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="text-gray-500">Loading image metadata...</div>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setActiveImage(img.image)}
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                              activeImage === img.image
+                                ? 'bg-teal-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            {activeImage === img.image ? 'Active' : 'View'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Summary Stats */}
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-900">Total Images:</span>
+                      <span className="ml-2 text-gray-700">{images.length}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-900">High Res:</span>
+                      <span className="ml-2 text-gray-700">
+                        {images.filter(img => {
+                          const metadata = imageMetadata.get(img.image);
+                          return metadata && metadata.width >= 1000;
+                        }).length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* MAIN IMAGE */}
-          <div className="flex-1 bg-linear-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-gray-200 shadow-lg h-[500px]">
+          <div className="flex-1 bg-linear-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-gray-200 shadow-lg h-[500px] relative">
             {activeImage ? (
-              <img
-                src={getImageUrl(activeImage) || undefined}
-                className="max-h-[380px] max-w-full object-contain p-4"
-                alt="Product"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src =
-                    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><rect width='100%' height='100%' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='20'>No Image Available</text></svg>";
-                }}
-              />
+              <>
+                {(() => {
+                  const activeImageData = images.find(img => img.image === activeImage);
+                  const imageUrl = getImageUrl(activeImage);
+                  const isLoading = imageLoading.has(activeImage);
+                  const hasFailed = failedImages.has(activeImage);
+                  const viewLabel = activeImageData?.view ? activeImageData.view.charAt(0).toUpperCase() + activeImageData.view.slice(1).toLowerCase() : 'Product';
+                  const altText = `${product.name} - ${selectedColor ? selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1) : 'Product'} - ${viewLabel} view`;
+                  const metadata = imageMetadata.get(activeImage);
+                  const isHighRes = metadata && metadata.width >= 1000;
+
+                  return (
+                    <div className="relative w-full h-full flex items-center justify-center group cursor-zoom-in"
+                         onClick={() => setZoomImage(activeImage)}>
+                      {isLoading && (
+                        <div className="absolute inset-0 bg-gray-200 flex items-center justify-center z-10">
+                          <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                      {!hasFailed ? (
+                        <img
+                          src={imageUrl || undefined}
+                          className={`max-h-[380px] max-w-full object-contain p-4 transition-all duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'} group-hover:scale-105`}
+                          alt={altText}
+                          onLoad={() => handleImageLoad(activeImage)}
+                          onLoadStart={() => handleImageLoadStart(activeImage)}
+                          onError={() => handleImageError(activeImage)}
+                        />
+                      ) : (
+                        <div className="text-center text-gray-500 p-8">
+                          <div className="text-6xl mb-4">📷</div>
+                          <div className="text-lg font-medium">Image Failed to Load</div>
+                          <div className="text-sm text-gray-400 mt-2">Please try refreshing the page</div>
+                        </div>
+                      )}
+
+                      {/* Quality & Resolution Badges */}
+                      {metadata && (
+                        <>
+                          <div className="absolute top-4 left-4 flex gap-2">
+                            <div className={`px-3 py-1 rounded-full text-sm font-bold shadow-lg ${
+                              isHighRes
+                                ? 'bg-green-500 text-white'
+                                : 'bg-blue-500 text-white'
+                            }`}>
+                              {isHighRes ? 'HD' : 'SD'}
+                            </div>
+                            <div className="bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-medium">
+                              {metadata.width}×{metadata.height}
+                            </div>
+                          </div>
+
+                          {/* Image Info Overlay */}
+                          <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-80 text-white p-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="flex justify-between items-center text-sm">
+                              <div>
+                                <div className="font-medium">{viewLabel} View</div>
+                                <div className="text-gray-300">
+                                  {metadata.format} • {metadata.aspectRatio} ratio • {
+                                    metadata.width * metadata.height > 1000000 ? 'Large' : 'Medium'
+                                  } size
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xs text-gray-300">Click to zoom</div>
+                                <div className="text-lg">🔍</div>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Zoom Indicator */}
+                      <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1">
+                        <span>🔍</span>
+                        <span>Click to zoom</span>
+                      </div>
+
+                      {/* View Label */}
+                      <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-lg text-sm font-medium shadow-md">
+                        {viewLabel} View
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
             ) : (
               <div className="text-center text-gray-500">
                 <div className="text-5xl mb-3">📷</div>
@@ -360,7 +690,7 @@ export default function ProductClient({
           </div>
 
           {/* CTA BUTTONS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className={`grid gap-3 ${user ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-3'}`}>
             {/* CREATE NOW BUTTON */}
             <button
               disabled={!selectedVariant}
@@ -374,23 +704,40 @@ export default function ProductClient({
               {selectedVariant ? "🎨 Create Now" : "Select Size"}
             </button>
 
-            {/* CART/CHECKOUT BUTTON - Only show if size selected */}
+            {/* CART/CHECKOUT BUTTONS - Only show if size selected */}
             {selectedVariant && (
-              <button
-                disabled={addingToCart || authLoading}
-                onClick={user ? handleAddToCart : () => router.push("/login")}
-                className="py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg bg-linear-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 hover:shadow-xl disabled:opacity-60"
-              >
-                {authLoading ? (
-                  <span>⏳ Checking...</span>
-                ) : addingToCart ? (
-                  <span>⏳ Adding...</span>
-                ) : user ? (
-                  <span>🛒 Go to Checkout</span>
+              <>
+                {user ? (
+                  // Logged in: Show only Checkout button
+                  <button
+                    disabled={addingToCart}
+                    onClick={handleAddToCart}
+                    className="py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg bg-linear-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 hover:shadow-xl disabled:opacity-60"
+                  >
+                    {addingToCart ? (
+                      <span>⏳ Adding...</span>
+                    ) : (
+                      <span>🛒 Add to Cart</span>
+                    )}
+                  </button>
                 ) : (
-                  <span>🔑 Login & Checkout</span>
+                  // Not logged in: Show both Login and Checkout buttons
+                  <>
+                    <button
+                      onClick={() => router.push("/login")}
+                      className="py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg bg-linear-to-r from-gray-600 to-gray-500 text-white hover:from-gray-700 hover:to-gray-600 hover:shadow-xl"
+                    >
+                      <span>🔑 Login</span>
+                    </button>
+                    <button
+                      onClick={handleAddToCart}
+                      className="py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg bg-linear-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 hover:shadow-xl"
+                    >
+                      <span>🛒 Add to Cart</span>
+                    </button>
+                  </>
                 )}
-              </button>
+              </>
             )}
           </div>
 
@@ -444,6 +791,132 @@ export default function ProductClient({
           </div>
         </div>
       </div>
+
+      {/* ZOOM MODAL */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          onClick={() => setZoomImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-full flex items-center">
+            {/* Previous Button */}
+            {images.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateZoomImage('prev');
+                }}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-70 text-white p-3 rounded-full hover:bg-opacity-90 transition-all duration-200 text-2xl z-10"
+              >
+                ‹
+              </button>
+            )}
+
+            <div className="relative">
+              <button
+                onClick={() => setZoomImage(null)}
+                className="absolute -top-12 right-0 text-white hover:text-gray-300 text-2xl font-bold z-20"
+              >
+                ✕
+              </button>
+              {(() => {
+                const zoomImageData = images.find(img => img.image === zoomImage);
+                const imageUrl = getImageUrl(zoomImage);
+                const currentIndex = images.findIndex(img => img.image === zoomImage) + 1;
+                const viewLabel = zoomImageData?.view ? zoomImageData.view.charAt(0).toUpperCase() + zoomImageData.view.slice(1).toLowerCase() : 'Product';
+                const altText = `${product.name} - ${selectedColor ? selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1) : 'Product'} - ${viewLabel} view (zoomed)`;
+                const metadata = imageMetadata.get(zoomImage);
+                const isHighRes = metadata && metadata.width >= 1000;
+
+                return (
+                  <div className="relative">
+                    <img
+                      src={imageUrl || undefined}
+                      alt={altText}
+                      className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+
+                    {/* Enhanced Zoom Info */}
+                    <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                      <div className="flex gap-2">
+                        <div className={`px-3 py-1 rounded-full text-sm font-bold shadow-lg ${
+                          isHighRes
+                            ? 'bg-green-500 text-white'
+                            : 'bg-blue-500 text-white'
+                        }`}>
+                          {isHighRes ? 'HD Quality' : 'SD Quality'}
+                        </div>
+                        <div className="bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-medium">
+                          {currentIndex} of {images.length}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setZoomImage(null)}
+                        className="text-white hover:text-gray-300 text-2xl font-bold bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Detailed Image Info */}
+                    {metadata && (
+                      <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg max-w-md">
+                        <div className="font-medium text-lg mb-2">{viewLabel} View</div>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span>Resolution:</span>
+                            <span className="font-medium">{metadata.width} × {metadata.height} px</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Aspect Ratio:</span>
+                            <span className="font-medium">{metadata.aspectRatio}:1</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Format:</span>
+                            <span className="font-medium">{metadata.format}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Quality:</span>
+                            <span className={`font-medium ${isHighRes ? 'text-green-400' : 'text-blue-400'}`}>
+                              {isHighRes ? 'High Resolution' : 'Standard Resolution'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Zoom Instructions */}
+                    <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-4 py-2 rounded-lg text-sm text-center max-w-xs">
+                      <div>Click outside or press ESC to close</div>
+                      {images.length > 1 && <div className="mt-1">Use arrow keys to navigate</div>}
+                      {metadata && (
+                        <div className="mt-2 text-xs text-gray-300">
+                          {metadata.width > 1920 ? 'Ultra HD' : metadata.width > 1280 ? 'Full HD' : 'HD'} • {metadata.format}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Next Button */}
+            {images.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateZoomImage('next');
+                }}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-70 text-white p-3 rounded-full hover:bg-opacity-90 transition-all duration-200 text-2xl z-10"
+              >
+                ›
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

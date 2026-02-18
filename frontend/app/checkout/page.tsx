@@ -8,7 +8,7 @@ import { useCart } from "@/lib/cart";
 function CheckoutPageContent() {
   const params = useSearchParams();
   const router = useRouter();
-  const { items: cartItems, totalPrice: cartTotal, clearCart } = useCart();
+  const { items: cartItems, totalPrice: cartTotal, clearCart, updateQuantity, removeFromCart, addToCart } = useCart();
 
   // Query parameters from product page or editor (for direct checkout)
   const imageUrl = params.get("image");
@@ -25,6 +25,7 @@ function CheckoutPageContent() {
   const [variantData, setVariantData] = useState<any>(null);
   const [productData, setProductData] = useState<any>(null);
   const [productError, setProductError] = useState<string | null>(null);
+  const [productDataMap, setProductDataMap] = useState<Map<string, any>>(new Map());
   const [userId, setUserId] = useState<string | null>(null);
 
   // Check if this is a direct checkout (from product page) or cart checkout
@@ -95,7 +96,55 @@ function CheckoutPageContent() {
     } else {
       setLoading(false);
     }
-  }, [variantId, isDirectCheckout, isCartCheckout]);
+  }, [variantId || null, productId || null, isDirectCheckout, isCartCheckout]);
+
+  // Fetch product data for cart items
+  useEffect(() => {
+    if (isCartCheckout && cartItems.length > 0) {
+      const fetchProductData = async () => {
+        const newProductDataMap = new Map();
+        for (const item of cartItems) {
+          if (!newProductDataMap.has(item.productId)) {
+            try {
+              const res = await api.get(`/products/${item.productId}`);
+              if (res.data?.success && res.data?.data) {
+                newProductDataMap.set(item.productId, res.data.data);
+              }
+            } catch (e) {
+              console.error(`Failed to fetch product ${item.productId}:`, e);
+            }
+          }
+        }
+        setProductDataMap(newProductDataMap);
+      };
+      fetchProductData();
+    }
+  }, [cartItems, isCartCheckout]);
+
+  const handleSizeChange = (itemId: string, newSize: string) => {
+    const item = cartItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    const product = productDataMap.get(item.productId);
+    if (!product) return;
+
+    // Find the variant with the new size
+    const newVariant = product.variants?.find((v: any) => v.size === newSize);
+    if (!newVariant) return;
+
+    // Remove current item and add new one with different size
+    removeFromCart(itemId);
+    addToCart({
+      productId: item.productId,
+      variantId: newVariant.id,
+      quantity: item.quantity,
+      price: newVariant.price,
+      name: item.name,
+      size: newSize,
+      color: item.color,
+      imageUrl: item.imageUrl
+    });
+  };
 
   async function handlePlaceOrder() {
     // Get user from token
@@ -108,7 +157,7 @@ function CheckoutPageContent() {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       setUserId(payload.id);
-    } catch (e) {
+    } catch {
       setError("Invalid session. Please login again.");
       return;
     }
@@ -249,15 +298,60 @@ function CheckoutPageContent() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-1">{item.name}</h3>
-                    <div className="space-y-1 mb-2">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900 text-lg">{item.name}</h3>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-red-500 hover:text-red-700 text-sm font-medium"
+                        title="Remove item"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="space-y-2 mb-3">
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <span className="flex items-center gap-1">
                           <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color.toLowerCase() }}></span>
                           {item.color}
                         </span>
-                        <span>Size: {item.size}</span>
-                        <span>Qty: {item.quantity}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Qty:</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 text-sm"
+                            >
+                              -
+                            </button>
+                            <span className="px-2 py-1 border border-gray-300 rounded bg-white text-sm min-w-[40px] text-center">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 text-sm"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Size:</span>
+                          <select
+                            value={item.size}
+                            onChange={(e) => handleSizeChange(item.id, e.target.value)}
+                            className="px-2 py-1 border border-gray-300 rounded bg-white text-sm"
+                          >
+                            {productDataMap.get(item.productId)?.variants?.map((variant: any) => (
+                              <option key={variant.id} value={variant.size}>
+                                {variant.size}
+                              </option>
+                            )) || (
+                              <option value={item.size}>{item.size}</option>
+                            )}
+                          </select>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">

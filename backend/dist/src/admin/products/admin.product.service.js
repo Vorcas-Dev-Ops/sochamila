@@ -18,7 +18,7 @@ const generateSKU = (productName, colorName, size) => {
    CREATE PRODUCT
 ===================================================== */
 const createProduct = async (data) => {
-    if (!data.name || !data.productType || !data.audience) {
+    if (!data.name || !data.productType || !data.gender || !data.department) {
         throw new Error("Missing required product fields");
     }
     if (!Array.isArray(data.colors) || data.colors.length === 0) {
@@ -45,7 +45,8 @@ const createProduct = async (data) => {
         data: {
             name: data.name.trim(),
             description: data.description ?? null,
-            audience: data.audience,
+            gender: data.gender,
+            department: data.department,
             productType: data.productType,
             minPrice,
             isActive: data.isActive ?? true,
@@ -57,6 +58,7 @@ const createProduct = async (data) => {
                         imageUrl: img.imageUrl,
                         sortOrder: index,
                         isPrimary: index === 0,
+                        position: img.position || "other",
                     })),
                 }
                 : undefined,
@@ -100,7 +102,8 @@ const getAllProducts = async () => {
         select: {
             id: true,
             name: true,
-            audience: true,
+            gender: true,
+            department: true,
             productType: true,
             minPrice: true,
             isActive: true,
@@ -113,6 +116,7 @@ const getAllProducts = async () => {
                     imageUrl: true,
                     sortOrder: true,
                     isPrimary: true,
+                    position: true,
                 },
             },
             colors: {

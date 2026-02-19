@@ -24,7 +24,24 @@ const CATEGORIES = [
   { value: "HOME", label: "Home" },
 ];
 
-const PRODUCT_TYPES = [
+const PRODUCT_TYPES_BY_CATEGORY: Record<string, { value: string; label: string }[]> = {
+  CLOTHING: [
+    { value: "TSHIRT", label: "T-Shirt" },
+    { value: "SHIRT", label: "Shirt" },
+    { value: "HOODIE", label: "Hoodie" },
+    { value: "SWEATSHIRT", label: "Sweatshirt" },
+    { value: "JACKET", label: "Jacket" },
+  ],
+  ACCESSORIES: [
+    { value: "CAP", label: "Cap" },
+    { value: "BAG", label: "Bag" },
+  ],
+  HOME: [
+    { value: "MUG", label: "Mug" },
+  ],
+};
+
+const ALL_PRODUCT_TYPES = [
   { value: "TSHIRT", label: "T-Shirt" },
   { value: "SHIRT", label: "Shirt" },
   { value: "HOODIE", label: "Hoodie" },
@@ -115,8 +132,8 @@ export default function ProductsList() {
 
   /* FILTER STATE */
   const [gender, setGender] = useState<string | null>(null);
-  const [category, setCategory] = useState<string | null>(null);
-  const [productType, setProductType] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedProductTypes, setSelectedProductTypes] = useState<string[]>([]);
   const [color, setColor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -125,6 +142,37 @@ export default function ProductsList() {
   const [maxPrice, setMaxPrice] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showColorGrid, setShowColorGrid] = useState(false);
+
+  /* Multi-select helpers */
+  const toggleCategory = (value: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(value) 
+        ? prev.filter(c => c !== value)
+        : [...prev, value]
+    );
+    // Clear product types when category changes
+    setSelectedProductTypes([]);
+  };
+
+  const toggleProductType = (value: string) => {
+    setSelectedProductTypes(prev => 
+      prev.includes(value) 
+        ? prev.filter(p => p !== value)
+        : [...prev, value]
+    );
+  };
+
+  const clearAllFilters = () => {
+    setGender(null);
+    setSelectedCategories([]);
+    setSelectedProductTypes([]);
+    setColor(null);
+    setSearch("");
+    setSort("");
+    setMinPrice("");
+    setMaxPrice("");
+    setInStockOnly(false);
+  };
 
   /* ================= FETCH ================= */
 
@@ -155,8 +203,8 @@ export default function ProductsList() {
 
     list = list.filter((p) => {
       if (gender && p.gender !== gender) return false;
-      if (category && p.department !== category) return false;
-      if (productType && p.productType !== productType) return false;
+      if (selectedCategories.length > 0 && !selectedCategories.includes(p.department)) return false;
+      if (selectedProductTypes.length > 0 && !selectedProductTypes.includes(p.productType)) return false;
 
       if (
         search &&
@@ -200,8 +248,8 @@ export default function ProductsList() {
   }, [
     products,
     gender,
-    category,
-    productType,
+    selectedCategories,
+    selectedProductTypes,
     color,
     search,
     inStockOnly,
@@ -217,8 +265,16 @@ export default function ProductsList() {
   /* ================= ACTIVE FILTERS ================= */
   const activeFilters = [
     gender && { key: "gender", label: GENDERS.find(g => g.value === gender)?.label, onRemove: () => setGender(null) },
-    category && { key: "category", label: CATEGORIES.find(c => c.value === category)?.label, onRemove: () => setCategory(null) },
-    productType && { key: "productType", label: PRODUCT_TYPES.find(p => p.value === productType)?.label, onRemove: () => setProductType(null) },
+    ...selectedCategories.map(cat => ({ 
+      key: `category-${cat}`, 
+      label: CATEGORIES.find(c => c.value === cat)?.label, 
+      onRemove: () => toggleCategory(cat) 
+    })),
+    ...selectedProductTypes.map(type => ({ 
+      key: `type-${type}`, 
+      label: ALL_PRODUCT_TYPES.find(p => p.value === type)?.label, 
+      onRemove: () => toggleProductType(type) 
+    })),
     color && { key: "color", label: color, onRemove: () => setColor(null) },
     inStockOnly && { key: "stock", label: "In Stock", onRemove: () => setInStockOnly(false) },
     minPrice && { key: "minPrice", label: `Min ₹${minPrice}`, onRemove: () => setMinPrice("") },
@@ -230,14 +286,12 @@ export default function ProductsList() {
       {/* ================= HEADER ================= */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">All Products</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""} found
-        </p>
       </div>
 
       {/* ================= ENHANCED TOP FILTER BAR ================= */}
       <div className="bg-gradient-to-r from-white to-gray-50 border rounded-xl p-4 mb-4 shadow-sm">
-        <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          <div className="flex flex-wrap gap-4 items-center flex-1">
           {/* Mobile Filter Button */}
           <button
             onClick={() => setShowMobileFilters(true)}
@@ -361,22 +415,19 @@ export default function ProductsList() {
           {/* Clear All */}
           {activeFilters.length > 0 && (
             <button
-              onClick={() => {
-                setGender(null);
-                setCategory(null);
-                setProductType(null);
-                setColor(null);
-                setSearch("");
-                setSort("");
-                setMinPrice("");
-                setMaxPrice("");
-                setInStockOnly(false);
-              }}
-              className="ml-auto flex items-center gap-1.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-full transition-colors"
+              onClick={clearAllFilters}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-full transition-colors"
             >
               <X size={16} /> Clear all
             </button>
           )}
+          </div>
+          
+          {/* Product Count - Right Side */}
+          <div className="flex items-center gap-2 text-sm text-gray-600 bg-white px-4 py-2 rounded-full border shadow-sm">
+            <span className="font-semibold text-teal-600">{filteredProducts.length}</span>
+            <span>product{filteredProducts.length !== 1 ? "s" : ""} found</span>
+          </div>
         </div>
       </div>
 
@@ -424,22 +475,25 @@ export default function ProductsList() {
               {CATEGORIES.map((c) => (
                 <FilterCheckbox
                   key={c.value}
-                  checked={category === c.value}
-                  onChange={() => setCategory(category === c.value ? null : c.value)}
+                  checked={selectedCategories.includes(c.value)}
+                  onChange={() => toggleCategory(c.value)}
                   label={c.label}
                 />
               ))}
             </div>
           </FilterSection>
 
-          {/* Product Type Filter */}
+          {/* Product Type Filter - Dynamic based on selected Categories */}
           <FilterSection title="Product Type" icon="👕">
             <div className="space-y-1">
-              {PRODUCT_TYPES.map((p) => (
+              {(selectedCategories.length > 0 
+                ? selectedCategories.flatMap(cat => PRODUCT_TYPES_BY_CATEGORY[cat] || [])
+                : ALL_PRODUCT_TYPES
+              ).map((p) => (
                 <FilterCheckbox
                   key={p.value}
-                  checked={productType === p.value}
-                  onChange={() => setProductType(productType === p.value ? null : p.value)}
+                  checked={selectedProductTypes.includes(p.value)}
+                  onChange={() => toggleProductType(p.value)}
                   label={p.label}
                 />
               ))}
@@ -455,10 +509,10 @@ export default function ProductsList() {
             onClose={() => setShowMobileFilters(false)}
             gender={gender}
             setGender={setGender}
-            category={category}
-            setCategory={setCategory}
-            productType={productType}
-            setProductType={setProductType}
+            selectedCategories={selectedCategories}
+            toggleCategory={toggleCategory}
+            selectedProductTypes={selectedProductTypes}
+            toggleProductType={toggleProductType}
             color={color}
             setColor={setColor}
             inStockOnly={inStockOnly}
@@ -539,10 +593,10 @@ function MobileFilterDrawer({
   onClose,
   gender,
   setGender,
-  category,
-  setCategory,
-  productType,
-  setProductType,
+  selectedCategories,
+  toggleCategory,
+  selectedProductTypes,
+  toggleProductType,
   color,
   setColor,
   inStockOnly,
@@ -551,10 +605,10 @@ function MobileFilterDrawer({
   onClose: () => void;
   gender: string | null;
   setGender: (v: string | null) => void;
-  category: string | null;
-  setCategory: (v: string | null) => void;
-  productType: string | null;
-  setProductType: (v: string | null) => void;
+  selectedCategories: string[];
+  toggleCategory: (v: string) => void;
+  selectedProductTypes: string[];
+  toggleProductType: (v: string) => void;
   color: string | null;
   setColor: (v: string | null) => void;
   inStockOnly: boolean;
@@ -594,9 +648,9 @@ function MobileFilterDrawer({
               {CATEGORIES.map((c) => (
                 <button
                   key={c.value}
-                  onClick={() => setCategory(category === c.value ? null : c.value)}
+                  onClick={() => toggleCategory(c.value)}
                   className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                    category === c.value
+                    selectedCategories.includes(c.value)
                       ? "bg-teal-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
@@ -609,12 +663,15 @@ function MobileFilterDrawer({
 
           <MobileFilterSection title="Product Type">
             <div className="flex flex-wrap gap-2">
-              {PRODUCT_TYPES.map((p) => (
+              {(selectedCategories.length > 0 
+                ? selectedCategories.flatMap(cat => PRODUCT_TYPES_BY_CATEGORY[cat] || [])
+                : ALL_PRODUCT_TYPES
+              ).map((p: { value: string; label: string }) => (
                 <button
                   key={p.value}
-                  onClick={() => setProductType(productType === p.value ? null : p.value)}
+                  onClick={() => toggleProductType(p.value)}
                   className={`px-4 py-2 rounded-full text-sm transition-colors ${
-                    productType === p.value
+                    selectedProductTypes.includes(p.value)
                       ? "bg-teal-600 text-white"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}

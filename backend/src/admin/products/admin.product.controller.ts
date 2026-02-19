@@ -17,6 +17,7 @@ export const createProduct = async (req: Request, res: Response) => {
       isActive,
       colors,
       productImageCount,
+      imagePositions,
     } = req.body;
 
     /* ---------- VALIDATION ---------- */
@@ -68,6 +69,16 @@ export const createProduct = async (req: Request, res: Response) => {
 
     const totalProductImages = Number(productImageCount) || 0;
 
+    /* ---------- PARSE IMAGE POSITIONS ---------- */
+    let parsedPositions: string[] = [];
+    try {
+      parsedPositions = typeof imagePositions === "string" 
+        ? JSON.parse(imagePositions) 
+        : (imagePositions || []);
+    } catch {
+      parsedPositions = [];
+    }
+
     /* ---------- PRODUCT-LEVEL IMAGES ---------- */
 
     const productImages =
@@ -76,6 +87,7 @@ export const createProduct = async (req: Request, res: Response) => {
             imageUrl: `/uploads/${file.filename}`,
             sortOrder: index,
             isPrimary: index === 0,
+            position: parsedPositions[index] || "other",
           }))
         : [];
 

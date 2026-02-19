@@ -43,7 +43,8 @@ exports.createProductSchema = zod_1.z.object({
         .min(3, "Product name must be at least 3 characters")
         .max(255, "Product name must be less than 255 characters"),
     description: zod_1.z.string().optional(),
-    audience: zod_1.z.enum(["MEN", "WOMEN", "KIDS", "UNISEX"]),
+    gender: zod_1.z.enum(["MEN", "WOMEN", "KIDS", "UNISEX"]),
+    department: zod_1.z.enum(["CLOTHING", "ACCESSORIES", "FOOTWEAR", "HOME_LIVING", "GEAR"]),
     productType: zod_1.z.string().min(1, "Product type is required"),
     isActive: zod_1.z.boolean().default(true),
     isAvailable: zod_1.z.boolean().default(true),

@@ -41,18 +41,18 @@ const client_1 = require("@prisma/client");
 ====================================================== */
 const createProduct = async (req, res) => {
     try {
-        const { name, description, audience, productType, isActive, colors, productImageCount, } = req.body;
+        const { name, description, gender, department, productType, isActive, colors, productImageCount, imagePositions, } = req.body;
         /* ---------- VALIDATION ---------- */
-        if (!name || !audience || !productType || !colors) {
+        if (!name || !gender || !department || !productType || !colors) {
             return res.status(400).json({
                 success: false,
                 message: "Missing required fields",
             });
         }
-        if (!Object.values(client_1.AudienceCategory).includes(audience)) {
+        if (!Object.values(client_1.Gender).includes(gender)) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid audience category",
+                message: "Invalid gender",
             });
         }
         if (!Object.values(client_1.ProductType).includes(productType)) {
@@ -78,12 +78,23 @@ const createProduct = async (req, res) => {
         const productFiles = files?.productImages ?? [];
         const colorFiles = files?.colorImages ?? [];
         const totalProductImages = Number(productImageCount) || 0;
+        /* ---------- PARSE IMAGE POSITIONS ---------- */
+        let parsedPositions = [];
+        try {
+            parsedPositions = typeof imagePositions === "string"
+                ? JSON.parse(imagePositions)
+                : (imagePositions || []);
+        }
+        catch {
+            parsedPositions = [];
+        }
         /* ---------- PRODUCT-LEVEL IMAGES ---------- */
         const productImages = totalProductImages > 0
             ? productFiles.slice(0, totalProductImages).map((file, index) => ({
                 imageUrl: `/uploads/${file.filename}`,
                 sortOrder: index,
                 isPrimary: index === 0,
+                position: parsedPositions[index] || "other",
             }))
             : [];
         /* ---------- COLOR-LEVEL IMAGES ---------- */
@@ -110,7 +121,8 @@ const createProduct = async (req, res) => {
         const product = await productService.createProduct({
             name: name.trim(),
             description: description?.trim() || null,
-            audience,
+            gender,
+            department,
             productType,
             isActive: isActive !== "false",
             images: productImages,

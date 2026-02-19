@@ -63,6 +63,7 @@ export const createProduct = async (data: any) => {
               imageUrl: img.imageUrl,
               sortOrder: index,
               isPrimary: index === 0,
+              position: img.position || "other",
             })),
           }
         : undefined,
@@ -127,6 +128,7 @@ export const getAllProducts = async () => {
           imageUrl: true,
           sortOrder: true,
           isPrimary: true,
+          // position: true, // TODO: Enable after running prisma generate
         },
       },
       colors: {

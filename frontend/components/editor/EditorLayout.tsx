@@ -75,6 +75,7 @@ export default function EditorLayout({
   const [isCapturingPreview, setCapturingPreview] = useState(false);
   const [activeToolTab, setActiveToolTab] = useState<ToolTab>("text");
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const selectedColor = variant.color ?? "default";
   const { addToCart } = useCart();
@@ -539,19 +540,32 @@ export default function EditorLayout({
       )}
 
       {/* Main Canvas Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar - Hidden on mobile */}
-        <div className="hidden lg:flex h-14 bg-white border-b items-center justify-between px-4 shrink-0">
-          <div className="flex items-center gap-4">
-            <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              <span className="text-sm">Support</span>
-            </button>
-          </div>
+      <div className={`flex-1 flex flex-col min-w-0 ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}>
+        {/* Top Bar - Hidden on mobile, also hidden in fullscreen */}
+        <div className={`hidden lg:flex h-14 bg-white border-b items-center justify-end px-4 shrink-0 ${isFullscreen ? 'lg:hidden' : ''}`}>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900">
+            <button 
+              onClick={async () => {
+                if (canvasRef.current) {
+                  try {
+                    const html2canvas = (await import('html2canvas-pro')).default;
+                    const canvas = await html2canvas(canvasRef.current, {
+                      backgroundColor: null,
+                      scale: 2,
+                      useCORS: true,
+                    });
+                    const link = document.createElement('a');
+                    link.download = `design-${activeSide}-${Date.now()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                  } catch (err) {
+                    console.error('Export failed:', err);
+                    alert('Failed to export design. Please try again.');
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
@@ -563,19 +577,32 @@ export default function EditorLayout({
               </svg>
               <span className="text-sm">Share</span>
             </button>
-            <button className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900">
+            <button 
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
               </svg>
-              <span className="text-sm">Full screen</span>
+              <span className="text-sm">{isFullscreen ? "Exit Fullscreen" : "Full screen"}</span>
             </button>
           </div>
         </div>
 
         {/* Canvas & Right Panel Container */}
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden relative">
+          {/* Exit Fullscreen Button - Only visible in fullscreen */}
+          {isFullscreen && (
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="absolute top-4 right-4 z-50 bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            >
+              Exit Fullscreen
+            </button>
+          )}
+          
           {/* Canvas - Full width on mobile, flex-1 on desktop */}
-          <div className="flex-1 min-h-0">
+          <div className={`flex-1 flex flex-col min-h-0 ${isFullscreen ? 'h-full' : ''}`}>
             <EditorCanvas
               ref={canvasRef}
               product={{
@@ -593,49 +620,53 @@ export default function EditorLayout({
               captureMode={isCapturingPreview}
               availableSides={["front", "back", "left", "right"]}
               onSideChange={setActiveSide}
+              hideSideSelector={isFullscreen}
+              enableZoom={isFullscreen}
             />
           </div>
 
-          {/* Right Panel - Bottom sheet on mobile, sidebar on desktop */}
-          <div className="lg:w-80 h-32 lg:h-auto shrink-0">
-            <RightPanel
-              product={{ id: product.id, name: (product as any).name, images: editorImages }}
-              selectedColor={selectedColor}
-              activeSide={activeSide}
-              setActiveSide={setActiveSide}
-              layerCount={layers.length}
-              selectedLayerId={selectedLayerId}
-              getPreviewImages={getPreviewImages}
-              availableSizes={availableSizes}
-              availableColors={availableColors}
-              variants={product.variants}
-              onAddToCart={(variantId, productName, selectedSize, selectedColor, price) => {
-                // Find the variant details
-                const selectedVariant = product.variants?.find(v => v.id === variantId);
-                
-                if (!selectedVariant) {
-                  alert("Error: Variant not found");
-                  return;
-                }
-                
-                // Add to cart
-                addToCart({
-                  productId: product.id,
-                  variantId: variantId,
-                  quantity: 1,
-                  price: price,
-                  name: productName,
-                  size: selectedSize,
-                  color: selectedColor,
-                  imageUrl: variant.images?.[0]?.image || "/placeholder.png",
-                });
-                
-                alert(`${productName} (${selectedSize}, ${selectedColor}) added to cart!`);
-                // Redirect to checkout page
-                window.location.href = "/checkout";
-              }}
-            />
-          </div>
+          {/* Right Panel - Bottom sheet on mobile, sidebar on desktop - Hidden in fullscreen */}
+          {!isFullscreen && (
+            <div className="lg:w-80 h-32 lg:h-auto shrink-0">
+              <RightPanel
+                product={{ id: product.id, name: (product as any).name, images: editorImages }}
+                selectedColor={selectedColor}
+                activeSide={activeSide}
+                setActiveSide={setActiveSide}
+                layerCount={layers.length}
+                selectedLayerId={selectedLayerId}
+                getPreviewImages={getPreviewImages}
+                availableSizes={availableSizes}
+                availableColors={availableColors}
+                variants={product.variants}
+                onAddToCart={(variantId, productName, selectedSize, selectedColor, price) => {
+                  // Find the variant details
+                  const selectedVariant = product.variants?.find(v => v.id === variantId);
+                                
+                  if (!selectedVariant) {
+                    alert("Error: Variant not found");
+                    return;
+                  }
+                                
+                  // Add to cart
+                  addToCart({
+                    productId: product.id,
+                    variantId: variantId,
+                    quantity: 1,
+                    price: price,
+                    name: productName,
+                    size: selectedSize,
+                    color: selectedColor,
+                    imageUrl: variant.images?.[0]?.image || "/placeholder.png",
+                  });
+                                
+                  alert(`${productName} (${selectedSize}, ${selectedColor}) added to cart!`);
+                  // Redirect to checkout page
+                  window.location.href = "/checkout";
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

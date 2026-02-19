@@ -55,6 +55,12 @@ interface EditorCanvasProps {
   /** Side selection props */
   availableSides?: Side[];
   onSideChange?: (side: Side) => void;
+  
+  /** When true, hide side selector (for fullscreen mode) */
+  hideSideSelector?: boolean;
+  
+  /** When true, enable zoom functionality (for fullscreen mode) */
+  enableZoom?: boolean;
 }
 
 /* ======================================================
@@ -121,7 +127,17 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
     captureMode = false,
     availableSides = ["front", "back", "left", "right"],
     onSideChange,
+    hideSideSelector = false,
+    enableZoom = false,
   }, ref) {
+  const [zoom, setZoom] = useState(1);
+  
+  // Reset zoom when exiting fullscreen (enableZoom changes from true to false)
+  useEffect(() => {
+    if (!enableZoom) {
+      setZoom(1);
+    }
+  }, [enableZoom]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] =
     useState(CANVAS_SIZE);
@@ -222,13 +238,45 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-gray-100 p-4 lg:px-8 sticky top-0 overflow-auto">
-      {/* Canvas Container */}
-      <div
-        ref={containerRef}
-        className="relative w-[280px] h-[350px] sm:w-[350px] sm:h-[440px] lg:w-[420px] lg:h-[520px] bg-white rounded-2xl shadow-xl transition-all"
-        onMouseDown={() => setSelectedLayerId(null)}
-      >
+    <div className="flex-1 flex flex-col items-center justify-center bg-gray-100 p-4 lg:px-8 overflow-hidden">
+      {/* Zoom Controls - Only visible when zoom is enabled */}
+      {enableZoom && (
+        <div className="absolute top-4 left-4 z-50 flex items-center gap-2 bg-white rounded-lg shadow-lg p-2">
+          <button
+            onClick={() => setZoom(z => Math.max(0.5, z - 0.25))}
+            className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded text-lg font-bold"
+          >
+            −
+          </button>
+          <span className="text-sm font-medium w-12 text-center">{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={() => setZoom(z => Math.min(3, z + 0.25))}
+            className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded text-lg font-bold"
+          >
+            +
+          </button>
+          <button
+            onClick={() => setZoom(1)}
+            className="ml-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+      
+      {/* Scrollable Container for Zoomed Canvas */}
+      <div className={`flex-1 flex items-center justify-center ${enableZoom ? 'overflow-auto w-full h-full' : 'overflow-hidden'}`}>
+        {/* Canvas Container */}
+        <div
+          ref={containerRef}
+          className="relative w-[280px] h-[350px] sm:w-[350px] sm:h-[440px] lg:w-[420px] lg:h-[520px] bg-white rounded-2xl shadow-xl transition-transform flex-shrink-0"
+          style={{ 
+            transform: `scale(${zoom})`,
+            transformOrigin: 'center center',
+            margin: zoom > 1 ? 'auto' : undefined
+          }}
+          onMouseDown={() => setSelectedLayerId(null)}
+        >
         {/* PRODUCT IMAGE */}
         {productImage ? (
           <img
@@ -352,20 +400,11 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
             {selectedColor.toUpperCase()} · {side.toUpperCase()}
           </span>
         )}
-        {!captureMode && !selectedLayerId && (
-          <span className="absolute bottom-4 left-4 bg-gray-800 text-white text-[11px] px-3 py-1.5 rounded-lg max-w-xs">
-            Click to select layer • Delete key to remove • Use left panel to edit
-          </span>
-        )}
-        {!captureMode && selectedLayerId && (
-          <span className="absolute bottom-4 left-4 bg-indigo-600 text-white text-[11px] px-3 py-1.5 rounded-lg">
-            Drag to move • Drag edges to resize • Use left panel to rotate
-          </span>
-        )}
+        </div>
       </div>
 
       {/* Side Selector - Below Canvas */}
-      {!captureMode && onSideChange && (
+      {!captureMode && onSideChange && !hideSideSelector && (
         <div className="mt-4 flex items-center gap-2">
           {availableSides.map((s) => (
             <button

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { X, Filter, ChevronDown, ShoppingBag, Heart, SlidersHorizontal } from "lucide-react";
 import type { Product } from "@/types/product";
 
 /* ================= CONFIG ================= */
@@ -11,18 +11,101 @@ const API_URL = "http://localhost:5000";
 
 /* ================= CONSTANTS ================= */
 
-const AUDIENCES = ["MEN", "WOMEN", "KIDS", "ACCESSORIES"];
-const PRODUCT_TYPES = ["TSHIRT", "SHIRT", "HOODIE", "SWEATSHIRT", "CAP"];
-const COLORS = ["Black", "White", "Red", "Blue", "Green", "Yellow"];
+const GENDERS = [
+  { value: "MEN", label: "Men" },
+  { value: "WOMEN", label: "Women" },
+  { value: "KIDS", label: "Kids" },
+  { value: "UNISEX", label: "Unisex" },
+];
 
-const COLOR_MAP: Record<string, string> = {
-  black: "#000000",
-  white: "#ffffff",
-  red: "#ef4444",
-  blue: "#3b82f6",
-  green: "#22c55e",
-  yellow: "#eab308",
-};
+const CATEGORIES = [
+  { value: "CLOTHING", label: "Clothing" },
+  { value: "ACCESSORIES", label: "Accessories" },
+  { value: "HOME", label: "Home" },
+];
+
+const PRODUCT_TYPES = [
+  { value: "TSHIRT", label: "T-Shirt" },
+  { value: "SHIRT", label: "Shirt" },
+  { value: "HOODIE", label: "Hoodie" },
+  { value: "SWEATSHIRT", label: "Sweatshirt" },
+  { value: "JACKET", label: "Jacket" },
+  { value: "CAP", label: "Cap" },
+  { value: "MUG", label: "Mug" },
+  { value: "BAG", label: "Bag" },
+];
+
+const COLORS = [
+  // Reds
+  { name: "Red", hex: "#EF4444" },
+  { name: "Crimson", hex: "#DC2626" },
+  { name: "Maroon", hex: "#7F1D1D" },
+  { name: "Dark Red", hex: "#991B1B" },
+  { name: "Deep Red", hex: "#5A1515" },
+  // Pinks
+  { name: "Hot Pink", hex: "#EC4899" },
+  { name: "Pink", hex: "#EC4899" },
+  { name: "Light Pink", hex: "#FBB6CE" },
+  { name: "Rose", hex: "#F43F5E" },
+  // Purples
+  { name: "Magenta", hex: "#D946EF" },
+  { name: "Purple", hex: "#A855F7" },
+  { name: "Dark Purple", hex: "#6B21A8" },
+  { name: "Indigo", hex: "#4F46E5" },
+  { name: "Lavender", hex: "#E9D5FF" },
+  { name: "Light Purple", hex: "#DDD6FE" },
+  // Blues
+  { name: "Light Blue", hex: "#93C5FD" },
+  { name: "Sky Blue", hex: "#38BDF8" },
+  { name: "Blue", hex: "#3B82F6" },
+  { name: "Dark Blue", hex: "#1E40AF" },
+  { name: "Navy", hex: "#001F3F" },
+  { name: "Cobalt", hex: "#0338EE" },
+  // Cyans/Teals
+  { name: "Cyan", hex: "#06B6D4" },
+  { name: "Teal", hex: "#14B8A6" },
+  { name: "Dark Teal", hex: "#0D9488" },
+  { name: "Turquoise", hex: "#20C997" },
+  { name: "Light Cyan", hex: "#A5F3FC" },
+  // Greens
+  { name: "Lime", hex: "#84CC16" },
+  { name: "Green", hex: "#22C55E" },
+  { name: "Dark Green", hex: "#166534" },
+  { name: "Forest Green", hex: "#15803D" },
+  { name: "Olive", hex: "#6B7280" },
+  { name: "Light Green", hex: "#BBF7D0" },
+  { name: "Sea Green", hex: "#20B2AA" },
+  // Yellows/Golds
+  { name: "Yellow", hex: "#EAB308" },
+  { name: "Gold", hex: "#FBBF24" },
+  { name: "Light Yellow", hex: "#FEFCE8" },
+  { name: "Amber", hex: "#FCD34D" },
+  // Oranges
+  { name: "Orange", hex: "#FB923C" },
+  { name: "Dark Orange", hex: "#EA580C" },
+  { name: "Rust", hex: "#CC5500" },
+  // Browns/Tans
+  { name: "Tan", hex: "#D2B48C" },
+  { name: "Beige", hex: "#F5F5DC" },
+  { name: "Brown", hex: "#92400E" },
+  { name: "Dark Brown", hex: "#5A3A1A" },
+  { name: "Chocolate", hex: "#6B3410" },
+  { name: "Khaki", hex: "#C3B091" },
+  // Grays
+  { name: "Light Gray", hex: "#D1D5DB" },
+  { name: "Gray", hex: "#9CA3AF" },
+  { name: "Dark Gray", hex: "#4B5563" },
+  { name: "Charcoal", hex: "#36454F" },
+  { name: "Slate", hex: "#64748B" },
+  // Neutrals
+  { name: "White", hex: "#FFFFFF" },
+  { name: "Black", hex: "#000000" },
+  { name: "Off-White", hex: "#F9FAFB" },
+];
+
+const COLOR_MAP: Record<string, string> = Object.fromEntries(
+  COLORS.map(c => [c.name.toLowerCase().replace(/\s+/g, ''), c.hex])
+);
 
 /* ================= PAGE ================= */
 
@@ -31,7 +114,8 @@ export default function ProductsList() {
   const [loading, setLoading] = useState(true);
 
   /* FILTER STATE */
-  const [audience, setAudience] = useState<string | null>(null);
+  const [gender, setGender] = useState<string | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
   const [productType, setProductType] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -39,6 +123,8 @@ export default function ProductsList() {
   const [sort, setSort] = useState<"" | "price-asc" | "price-desc">("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showColorGrid, setShowColorGrid] = useState(false);
 
   /* ================= FETCH ================= */
 
@@ -68,7 +154,8 @@ export default function ProductsList() {
     let list = [...products];
 
     list = list.filter((p) => {
-      if (audience && p.audience !== audience) return false;
+      if (gender && p.gender !== gender) return false;
+      if (category && p.department !== category) return false;
       if (productType && p.productType !== productType) return false;
 
       if (
@@ -112,7 +199,8 @@ export default function ProductsList() {
     return list;
   }, [
     products,
-    audience,
+    gender,
+    category,
     productType,
     color,
     search,
@@ -123,121 +211,263 @@ export default function ProductsList() {
   ]);
 
   if (loading) {
-    return <p className="py-20 text-center">Loading products…</p>;
+    return <ProductsSkeleton />;
   }
 
+  /* ================= ACTIVE FILTERS ================= */
+  const activeFilters = [
+    gender && { key: "gender", label: GENDERS.find(g => g.value === gender)?.label, onRemove: () => setGender(null) },
+    category && { key: "category", label: CATEGORIES.find(c => c.value === category)?.label, onRemove: () => setCategory(null) },
+    productType && { key: "productType", label: PRODUCT_TYPES.find(p => p.value === productType)?.label, onRemove: () => setProductType(null) },
+    color && { key: "color", label: color, onRemove: () => setColor(null) },
+    inStockOnly && { key: "stock", label: "In Stock", onRemove: () => setInStockOnly(false) },
+    minPrice && { key: "minPrice", label: `Min ₹${minPrice}`, onRemove: () => setMinPrice("") },
+    maxPrice && { key: "maxPrice", label: `Max ₹${maxPrice}`, onRemove: () => setMaxPrice("") },
+  ].filter(Boolean) as { key: string; label: string | undefined; onRemove: () => void }[];
+
   return (
-    <section className="px-6 py-6">
-
-      {/* ================= FILTER BAR ================= */}
-      <div className="bg-white border rounded-xl p-4 mb-6 flex flex-wrap gap-3 items-center">
-
-        <input
-          placeholder="Search products"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border px-4 py-2 rounded-full w-64"
-        />
-
-        <select
-          value={color ?? ""}
-          onChange={(e) => setColor(e.target.value || null)}
-          className="border px-4 py-2 rounded-full"
-        >
-          <option value="">All Colors</option>
-          {COLORS.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="number"
-          placeholder="Min ₹"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-          className="border px-4 py-2 rounded-full w-28"
-        />
-
-        <input
-          type="number"
-          placeholder="Max ₹"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-          className="border px-4 py-2 rounded-full w-28"
-        />
-
-        <select
-          value={sort}
-          onChange={(e) =>
-            setSort(e.target.value as "price-asc" | "price-desc" | "")
-          }
-          className="border px-4 py-2 rounded-full"
-        >
-          <option value="">Sort by price</option>
-          <option value="price-asc">Low → High</option>
-          <option value="price-desc">High → Low</option>
-        </select>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={inStockOnly}
-            onChange={() => setInStockOnly((v) => !v)}
-          />
-          In stock
-        </label>
-
-        <button
-          onClick={() => {
-            setAudience(null);
-            setProductType(null);
-            setColor(null);
-            setSearch("");
-            setSort("");
-            setMinPrice("");
-            setMaxPrice("");
-            setInStockOnly(false);
-          }}
-          className="ml-auto text-sm text-red-600 flex items-center gap-1"
-        >
-          <X size={14} /> Reset
-        </button>
+    <section className="px-4 sm:px-6 py-6">
+      {/* ================= HEADER ================= */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">All Products</h1>
+        <p className="text-gray-500 text-sm mt-1">
+          {filteredProducts.length} product{filteredProducts.length !== 1 ? "s" : ""} found
+        </p>
       </div>
 
-      {/* ================= LAYOUT ================= */}
+      {/* ================= ENHANCED TOP FILTER BAR ================= */}
+      <div className="bg-gradient-to-r from-white to-gray-50 border rounded-xl p-4 mb-4 shadow-sm">
+        <div className="flex flex-wrap gap-4 items-center">
+          {/* Mobile Filter Button */}
+          <button
+            onClick={() => setShowMobileFilters(true)}
+            className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border rounded-full hover:shadow-md transition-all"
+          >
+            <SlidersHorizontal size={18} />
+            <span>Filters</span>
+          </button>
+
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <input
+              placeholder="Search products..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border pl-10 pr-4 py-2.5 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent shadow-sm"
+            />
+            <ShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          </div>
+
+          {/* Price Range */}
+          <div className="hidden md:flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border shadow-sm">
+            <span className="text-sm text-gray-500">₹</span>
+            <input
+              type="number"
+              placeholder="Min"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className="w-16 text-sm focus:outline-none"
+            />
+            <span className="text-gray-300">-</span>
+            <input
+              type="number"
+              placeholder="Max"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="w-16 text-sm focus:outline-none"
+            />
+          </div>
+
+          {/* Color Grid Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowColorGrid(!showColorGrid)}
+              className="flex items-center gap-2 bg-white border pl-3 pr-10 py-2.5 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm cursor-pointer min-w-[120px]"
+            >
+              <div 
+                className="w-4 h-4 rounded-full border"
+                style={{ 
+                  backgroundColor: color ? COLORS.find(c => c.name === color)?.hex : 'transparent',
+                  borderColor: color ? 'transparent' : '#ccc'
+                }} 
+              />
+              <span className="text-sm">{color || "All Colors"}</span>
+            </button>
+            <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform ${showColorGrid ? 'rotate-180' : ''}`} size={16} />
+            
+            {/* Color Grid Popup */}
+            {showColorGrid && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowColorGrid(false)} />
+                <div className="absolute top-full left-0 mt-2 w-80 bg-white border rounded-xl shadow-xl z-50 p-4 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-medium text-gray-700">Select Color</span>
+                    {color && (
+                      <button
+                        onClick={() => { setColor(null); setShowColorGrid(false); }}
+                        className="text-xs text-red-500 hover:text-red-600"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-6 gap-2">
+                    {COLORS.map((c) => (
+                      <button
+                        key={c.name}
+                        onClick={() => { setColor(c.name); setShowColorGrid(false); }}
+                        className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-110 ${
+                          color === c.name
+                            ? "border-teal-600 ring-2 ring-teal-200"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        style={{ backgroundColor: c.hex }}
+                        title={c.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="relative">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as "price-asc" | "price-desc" | "")}
+              className="appearance-none bg-white border pl-4 pr-10 py-2.5 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm cursor-pointer"
+            >
+              <option value="">Sort By</option>
+              <option value="price-asc">Price: Low → High</option>
+              <option value="price-desc">Price: High → Low</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+          </div>
+
+          {/* In Stock Toggle */}
+          <button
+            onClick={() => setInStockOnly(!inStockOnly)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all ${
+              inStockOnly
+                ? "bg-teal-600 text-white border-teal-600 shadow-md"
+                : "bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-current" />
+            In Stock
+          </button>
+
+          {/* Clear All */}
+          {activeFilters.length > 0 && (
+            <button
+              onClick={() => {
+                setGender(null);
+                setCategory(null);
+                setProductType(null);
+                setColor(null);
+                setSearch("");
+                setSort("");
+                setMinPrice("");
+                setMaxPrice("");
+                setInStockOnly(false);
+              }}
+              className="ml-auto flex items-center gap-1.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-full transition-colors"
+            >
+              <X size={16} /> Clear all
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ================= ACTIVE FILTERS ================= */}
+      {activeFilters.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {activeFilters.map((filter) => (
+            <span
+              key={filter.key}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-full text-sm font-medium animate-in fade-in slide-in-from-bottom-2"
+            >
+              {filter.label}
+              <button
+                onClick={filter.onRemove}
+                className="hover:bg-teal-200 rounded-full p-0.5 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* ================= LAYOUT: SIDEBAR + GRID ================= */}
       <div className="flex gap-6">
-
-        {/* SIDEBAR */}
+        {/* LEFT SIDEBAR FILTERS */}
         <aside className="w-64 shrink-0 hidden lg:block space-y-6">
-          <FilterBlock title="Audience">
-            {AUDIENCES.map((a) => (
-              <FilterButton
-                key={a}
-                active={audience === a}
-                onClick={() => setAudience(a)}
-              >
-                {a}
-              </FilterButton>
-            ))}
-          </FilterBlock>
+          {/* Gender Filter */}
+          <FilterSection title="Gender" icon="👤">
+            <div className="space-y-1">
+              {GENDERS.map((g) => (
+                <FilterCheckbox
+                  key={g.value}
+                  checked={gender === g.value}
+                  onChange={() => setGender(gender === g.value ? null : g.value)}
+                  label={g.label}
+                />
+              ))}
+            </div>
+          </FilterSection>
 
-          <FilterBlock title="Product Type">
-            {PRODUCT_TYPES.map((p) => (
-              <FilterButton
-                key={p}
-                active={productType === p}
-                onClick={() => setProductType(p)}
-              >
-                {p}
-              </FilterButton>
-            ))}
-          </FilterBlock>
+          {/* Category Filter */}
+          <FilterSection title="Category" icon="🏷️">
+            <div className="space-y-1">
+              {CATEGORIES.map((c) => (
+                <FilterCheckbox
+                  key={c.value}
+                  checked={category === c.value}
+                  onChange={() => setCategory(category === c.value ? null : c.value)}
+                  label={c.label}
+                />
+              ))}
+            </div>
+          </FilterSection>
+
+          {/* Product Type Filter */}
+          <FilterSection title="Product Type" icon="👕">
+            <div className="space-y-1">
+              {PRODUCT_TYPES.map((p) => (
+                <FilterCheckbox
+                  key={p.value}
+                  checked={productType === p.value}
+                  onChange={() => setProductType(productType === p.value ? null : p.value)}
+                  label={p.label}
+                />
+              ))}
+            </div>
+          </FilterSection>
+
+
         </aside>
 
+        {/* MOBILE FILTER DRAWER */}
+        {showMobileFilters && (
+          <MobileFilterDrawer
+            onClose={() => setShowMobileFilters(false)}
+            gender={gender}
+            setGender={setGender}
+            category={category}
+            setCategory={setCategory}
+            productType={productType}
+            setProductType={setProductType}
+            color={color}
+            setColor={setColor}
+            inStockOnly={inStockOnly}
+            setInStockOnly={setInStockOnly}
+          />
+        )}
+
         {/* GRID */}
-        <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-min">
           {filteredProducts.length === 0 ? (
             <div className="col-span-full py-32 text-center text-gray-500">
               No products found
@@ -255,39 +485,227 @@ export default function ProductsList() {
 
 /* ================= UI HELPERS ================= */
 
-function FilterBlock({
+function FilterSection({
   title,
+  icon,
   children,
 }: {
   title: string;
+  icon: string;
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <h3 className="font-semibold mb-2">{title}</h3>
-      <div className="space-y-1">{children}</div>
+    <div className="bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+      <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-800">
+        <span>{icon}</span>
+        {title}
+      </h3>
+      {children}
     </div>
   );
 }
 
-function FilterButton({
-  active,
-  onClick,
-  children,
+function FilterCheckbox({
+  checked,
+  onChange,
+  label,
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+  checked: boolean;
+  onChange: () => void;
+  label: string;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`block w-full text-left px-3 py-2 rounded ${
-        active ? "bg-teal-600 text-white" : "hover:bg-gray-100"
-      }`}
-    >
+    <label className="flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group">
+      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+        checked ? "bg-teal-600 border-teal-600" : "border-gray-300 group-hover:border-teal-400"
+      }`}>
+        {checked && (
+          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </div>
+      <input type="checkbox" checked={checked} onChange={onChange} className="hidden" />
+      <span className={`text-sm transition-colors ${checked ? "text-teal-700 font-medium" : "text-gray-600"}`}>
+        {label}
+      </span>
+    </label>
+  );
+}
+
+/* ================= MOBILE FILTER DRAWER ================= */
+
+function MobileFilterDrawer({
+  onClose,
+  gender,
+  setGender,
+  category,
+  setCategory,
+  productType,
+  setProductType,
+  color,
+  setColor,
+  inStockOnly,
+  setInStockOnly,
+}: {
+  onClose: () => void;
+  gender: string | null;
+  setGender: (v: string | null) => void;
+  category: string | null;
+  setCategory: (v: string | null) => void;
+  productType: string | null;
+  setProductType: (v: string | null) => void;
+  color: string | null;
+  setColor: (v: string | null) => void;
+  inStockOnly: boolean;
+  setInStockOnly: (v: boolean) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute right-0 top-0 h-full w-80 bg-white shadow-xl overflow-y-auto">
+        <div className="p-4 border-b flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Filters</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-4 space-y-6">
+          <MobileFilterSection title="Gender">
+            <div className="flex flex-wrap gap-2">
+              {GENDERS.map((g) => (
+                <button
+                  key={g.value}
+                  onClick={() => setGender(gender === g.value ? null : g.value)}
+                  className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                    gender === g.value
+                      ? "bg-teal-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </MobileFilterSection>
+
+          <MobileFilterSection title="Category">
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => setCategory(category === c.value ? null : c.value)}
+                  className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                    category === c.value
+                      ? "bg-teal-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </MobileFilterSection>
+
+          <MobileFilterSection title="Product Type">
+            <div className="flex flex-wrap gap-2">
+              {PRODUCT_TYPES.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setProductType(productType === p.value ? null : p.value)}
+                  className={`px-4 py-2 rounded-full text-sm transition-colors ${
+                    productType === p.value
+                      ? "bg-teal-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </MobileFilterSection>
+
+          <MobileFilterSection title="Color">
+            <div className="flex flex-wrap gap-2">
+              {COLORS.map((c) => (
+                <button
+                  key={c.name}
+                  onClick={() => setColor(color === c.name ? null : c.name)}
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${
+                    color === c.name ? "border-teal-600 scale-110" : "border-gray-200"
+                  }`}
+                  style={{ backgroundColor: c.hex }}
+                  title={c.name}
+                />
+              ))}
+            </div>
+          </MobileFilterSection>
+
+          <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer">
+            <input
+              type="checkbox"
+              checked={inStockOnly}
+              onChange={(e) => setInStockOnly(e.target.checked)}
+              className="w-5 h-5 rounded text-teal-600 focus:ring-teal-500"
+            />
+            <span className="font-medium">In stock only</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileFilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="font-semibold mb-3 text-gray-900">{title}</h3>
       {children}
-    </button>
+    </div>
+  );
+}
+
+/* ================= SKELETON LOADING ================= */
+
+function ProductsSkeleton() {
+  return (
+    <section className="px-4 sm:px-6 py-6">
+      <div className="mb-6">
+        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+        <div className="h-4 w-32 bg-gray-200 rounded mt-2 animate-pulse" />
+      </div>
+      <div className="bg-white border rounded-xl p-4 mb-6">
+        <div className="flex flex-wrap gap-3">
+          <div className="h-10 w-64 bg-gray-200 rounded-full animate-pulse" />
+          <div className="h-10 w-32 bg-gray-200 rounded-full animate-pulse" />
+          <div className="h-10 w-32 bg-gray-200 rounded-full animate-pulse" />
+        </div>
+      </div>
+      <div className="flex gap-6">
+        <aside className="w-64 shrink-0 hidden lg:block space-y-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i}>
+              <div className="h-5 w-24 bg-gray-200 rounded mb-2 animate-pulse" />
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((j) => (
+                  <div key={j} className="h-8 w-full bg-gray-200 rounded animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </aside>
+        <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="bg-white border rounded-xl p-3">
+              <div className="aspect-square bg-gray-200 rounded-lg animate-pulse" />
+              <div className="h-4 w-3/4 bg-gray-200 rounded mt-2 animate-pulse" />
+              <div className="h-4 w-1/2 bg-gray-200 rounded mt-2 animate-pulse" />
+              <div className="h-8 w-full bg-gray-200 rounded mt-3 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -331,69 +749,121 @@ function ProductCard({ product }: { product: Product }) {
   });
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   const colors = Array.from(
     new Set(product.variants.map((v) => v.color.toLowerCase()))
   );
 
+  const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+  const isOutOfStock = totalStock === 0;
+
+  useEffect(() => {
+    if (isHovered && images.length > 1) {
+      let i = 0;
+      const id = setInterval(() => {
+        i = (i + 1) % images.length;
+        setActiveIndex(i);
+      }, 1200);
+      return () => clearInterval(id);
+    } else {
+      setActiveIndex(0);
+    }
+  }, [isHovered, images.length]);
+
   return (
     <div
-      className="bg-white border rounded-xl p-3 hover:shadow-lg transition"
-      onMouseEnter={() => {
-        if (images.length > 1) {
-          let i = 0;
-          const id = setInterval(() => {
-            i = (i + 1) % images.length;
-            setActiveIndex(i);
-          }, 1200);
-          (window as any).__slider = id;
-        }
-      }}
-      onMouseLeave={() => {
-        clearInterval((window as any).__slider);
-        setActiveIndex(0);
-      }}
+      className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-100 hover:border-teal-300 h-fit"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+      {/* Image Container */}
+      <div className="relative aspect-[4/4.5] bg-gray-50 overflow-hidden">
         {images.length ? (
           <img
             src={images[activeIndex]}
             alt={product.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             onError={(e) => {
               e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23e5e7eb' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%239ca3af' font-family='system-ui' font-size='14'%3EImage not found%3C/text%3E%3C/svg%3E";
             }}
           />
         ) : (
-          <div className="h-full flex items-center justify-center text-gray-400 text-xs">
-            No Image
+          <div className="h-full flex items-center justify-center text-gray-300">
+            <ShoppingBag size={32} className="opacity-20" />
+          </div>
+        )}
+
+        {/* Hover Overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+
+        {/* Badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {!product.isActive && (
+            <span className="px-1.5 py-0.5 bg-gray-800 text-white text-[9px] font-medium rounded">
+              Inactive
+            </span>
+          )}
+          {isOutOfStock && (
+            <span className="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-medium rounded">
+              Sold Out
+            </span>
+          )}
+        </div>
+
+        {/* Wishlist Button */}
+        <button 
+          className="absolute top-2 right-2 p-1.5 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 shadow-md"
+          onClick={(e) => e.preventDefault()}
+        >
+          <Heart size={14} className="text-gray-500 hover:text-red-500 transition-colors" />
+        </button>
+
+        {/* Image Indicators */}
+        {images.length > 1 && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+            {images.slice(0, 4).map((_, idx) => (
+              <span
+                key={idx}
+                className={`w-1 h-1 rounded-full transition-all ${
+                  idx === activeIndex ? "bg-white w-2" : "bg-white/70"
+                }`}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      <h3 className="mt-2 text-sm font-semibold line-clamp-2">
-        {product.name}
-      </h3>
-
-      <p className="text-sm font-bold">₹{product.minPrice}</p>
-
-      {colors.length > 0 && (
-        <div className="mt-2 flex gap-1">
-          {colors.slice(0, 5).map((c) => (
-            <span
-              key={c}
-              className="w-4 h-4 rounded-full border"
-              style={{ backgroundColor: COLOR_MAP[c] }}
-            />
-          ))}
+      {/* Content - Minimal */}
+      <div className="px-2 py-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-[11px] font-medium text-gray-700 line-clamp-1 group-hover:text-teal-600 transition-colors flex-1 leading-tight">
+            {product.name}
+          </h3>
+          <p className="text-xs font-bold text-gray-900 whitespace-nowrap">
+            ₹{product.minPrice}
+          </p>
         </div>
-      )}
-
-      <Link href={`/products/${product.id}`} className="mt-3 block">
-        <button className="w-full bg-teal-600 text-white py-2 rounded-md text-sm hover:bg-teal-700">
-          View Details
-        </button>
-      </Link>
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] text-gray-400">
+            {product.department}
+          </span>
+          {colors.length > 0 && (
+            <div className="flex items-center gap-0.5">
+              {colors.slice(0, 2).map((c) => (
+                <span
+                  key={c}
+                  className="w-2.5 h-2.5 rounded-full border border-gray-200"
+                  style={{ backgroundColor: COLOR_MAP[c] || c }}
+                />
+              ))}
+              {colors.length > 2 && (
+                <span className="text-[8px] text-gray-400">+{colors.length - 2}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

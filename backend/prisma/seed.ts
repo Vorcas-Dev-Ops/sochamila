@@ -68,7 +68,7 @@ async function main() {
       data: {
         name: "Demo T-Shirt",
         description: "A demo product created by seed script",
-        audience: "MEN",
+        department: "CLOTHING",
         productType: "TSHIRT",
         minPrice: 299,
         images: {

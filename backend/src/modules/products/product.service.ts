@@ -22,7 +22,8 @@ export type ShopProduct = {
   id: string;
   name: string;
   description: string | null;
-  audience: string;
+  gender: string;
+  department: string;
   productType: string;
   thumbnail: string | null;
   minPrice: number;
@@ -76,7 +77,8 @@ const formatProduct = (product: any): ShopProduct => {
     id: product.id,
     name: product.name,
     description: product.description ?? null,
-    audience: product.audience,
+    gender: product.gender,
+    department: product.department,
     productType: product.productType,
     thumbnail,
     minPrice,

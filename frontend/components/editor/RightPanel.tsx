@@ -159,19 +159,19 @@ export default function RightPanel({
           Review your design details
         </p>
 
-        <div className="hidden lg:block space-y-3 mb-4">
+        <div className="hidden lg:block space-y-5 mb-4">
           {/* Size Selection */}
-          <div className="rounded-xl bg-white border-2 border-gray-200 p-4">
-            <p className="font-bold text-sm text-gray-900 mb-3">Select Size</p>
+          <div>
+            <p className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Size</p>
             <div className="grid grid-cols-3 gap-2">
               {availableSizes.map((size) => (
                 <button
                   key={size}
                   onClick={() => setSelectedSize(size)}
-                  className={`py-2 px-3 border-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
                     selectedSize === size
-                      ? "border-indigo-600 bg-indigo-50 text-indigo-700"
-                      : "border-gray-200 text-gray-700 hover:border-indigo-500 hover:bg-indigo-50"
+                      ? "bg-gray-900 text-white shadow-md"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   {size}
@@ -181,45 +181,40 @@ export default function RightPanel({
           </div>
 
           {/* Color Selection */}
-          <div className="rounded-xl bg-white border-2 border-gray-200 p-4">
-            <p className="font-bold text-sm text-gray-900 mb-3">Select Color</p>
+          <div>
+            <p className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Color</p>
             {availableColors.length > 0 ? (
-              <div className="grid grid-cols-5 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {availableColors.map((color) => (
                   <button
                     key={color.name}
                     title={color.name}
                     onClick={() => setSelectedVariantColor(color.name)}
-                    className={`w-10 h-10 rounded-full border-2 transition-all ${
+                    className={`w-9 h-9 rounded-full transition-all ${
                       selectedVariantColor.toLowerCase() === color.name.toLowerCase()
-                        ? "border-indigo-600 ring-2 ring-indigo-200 scale-110"
-                        : "border-gray-300 hover:border-gray-400"
+                        ? "ring-2 ring-offset-2 ring-gray-900 scale-110"
+                        : "hover:scale-105"
                     }`}
                     style={{ backgroundColor: color.hex }}
-                  >
-                    {selectedVariantColor.toLowerCase() === color.name.toLowerCase() && (
-                      <span className="text-white text-xs drop-shadow-md">✓</span>
-                    )}
-                  </button>
+                  />
                 ))}
               </div>
             ) : (
               <p className="text-xs text-gray-500">No colors available</p>
             )}
-            <p className="text-xs text-gray-500 mt-2 capitalize">Selected: {selectedVariantColor}</p>
           </div>
 
           {/* Price & Stock Info */}
           {selectedVariant && (
-            <div className="rounded-xl bg-green-50 border-2 border-green-200 p-4">
+            <div className="pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-green-700">Price</p>
-                  <p className="text-lg font-bold text-green-900">₹{selectedVariant.price}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Price</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{selectedVariant.price}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-green-700">Stock</p>
-                  <p className={`text-sm font-semibold ${selectedVariant.stock > 0 ? "text-green-900" : "text-red-600"}`}>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Stock</p>
+                  <p className={`text-sm font-medium ${selectedVariant.stock > 0 ? "text-green-600" : "text-red-500"}`}>
                     {selectedVariant.stock > 0 ? `${selectedVariant.stock} available` : "Out of stock"}
                   </p>
                 </div>
@@ -227,49 +222,29 @@ export default function RightPanel({
             </div>
           )}
 
-          <div className="rounded-xl bg-blue-50 border-2 border-blue-200 p-5 text-xs text-blue-900 space-y-3">
-            <p className="font-bold text-base flex items-center gap-2">
-              <span>ℹ️</span> Design Info
-            </p>
-            <div className="space-y-2 ml-5">
-              <p>
-                 <span className="font-semibold">Side:</span>{" "}
-                <span className="text-blue-700 font-bold text-sm uppercase bg-blue-200 px-2 py-0.5 rounded">{activeSide}</span>
-              </p>
-              <p>
-                 <span className="font-semibold">Color:</span>{" "}
-                <span className="text-blue-700 font-bold text-sm capitalize bg-blue-200 px-2 py-0.5 rounded">{selectedColor}</span>
-              </p>
-              <p>
-                 <span className="font-semibold">Layers:</span>{" "}
-                <span className="text-blue-700 font-bold inline-block bg-blue-200 px-2 py-0.5 rounded">{layerCount}</span>
-              </p>
-              {selectedLayerId && (
-                <p className="text-blue-700 font-semibold bg-blue-200 px-2 py-1.5 rounded inline-block mt-2">✓ Layer selected</p>
-              )}
+          {/* Design Info */}
+          <div className="pt-4 border-t border-gray-100">
+            <p className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Design Info</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Side</span>
+                <span className="font-medium text-gray-900 capitalize">{activeSide}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Color</span>
+                <span className="font-medium text-gray-900 capitalize">{selectedColor}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Layers</span>
+                <span className="font-medium text-gray-900">{layerCount}</span>
+              </div>
             </div>
-          </div>
-
-          <div className="rounded-xl bg-amber-50 border-2 border-amber-200 p-4 text-xs text-amber-900">
-            <p className="font-bold text-sm flex items-center gap-2 mb-3">
-              <span>💡</span> Quick Tips
-            </p>
-            <ul className="space-y-2 ml-5">
-              <li className="flex gap-2"><span>•</span> <span>Drag layers to move</span></li>
-              <li className="flex gap-2"><span>•</span> <span>Drag edges to resize</span></li>
-              <li className="flex gap-2"><span>•</span> <span>Press Delete to remove layer</span></li>
-              <li className="flex gap-2"><span>•</span> <span>Use Left panel to customize</span></li>
-            </ul>
           </div>
         </div>
       </div>
 
       {/* BOTTOM */}
       <div className="hidden lg:block space-y-3 border-t border-gray-200 pt-4">
-        <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition-all duration-200 transform active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base" title="Export your design as an image">
-          <span></span> Export Design
-        </button>
-
         <button 
           onClick={() => {
             if (selectedVariant && onAddToCart) {

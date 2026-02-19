@@ -122,6 +122,7 @@ export default function AccountPage() {
           <div className="bg-white p-4 rounded shadow-sm sticky top-24">
             <div className="font-semibold mb-2">Account</div>
             <nav className="flex flex-col text-sm text-gray-700">
+              <Link href="/dashboard" className="py-2">Dashboard</Link>
               <Link href="/account" className="py-2">Profile</Link>
               <Link href="/orders" className="py-2">Orders</Link>
               <Link href="/wishlist" className="py-2">Wishlist</Link>

@@ -26,16 +26,18 @@ enum VendorKycStatus {
   REJECTED
 }
 
-enum AudienceCategory {
+enum Gender {
   MEN
   WOMEN
   KIDS
+  UNISEX
 }
 
-enum ProductCategory {
-  REGULAR
-  GEAR
+enum ProductDepartment {
+  CLOTHING
   ACCESSORIES
+   HOME_LIVING
+  GEAR
 }
 
 enum ProductType {
@@ -187,9 +189,9 @@ model Product {
   name        String
   description String?
 
-  audience        AudienceCategory
-  productCategory ProductCategory @default(REGULAR)
-  productType ProductType
+  gender          Gender          @default(UNISEX)
+  department      ProductDepartment @default(CLOTHING)
+  productType     ProductType
 
   minPrice Int
 

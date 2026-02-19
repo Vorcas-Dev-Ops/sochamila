@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as productService from "./admin.product.service";
-import { AudienceCategory, ProductType } from "@prisma/client";
+import { Gender, ProductDepartment, ProductType } from "@prisma/client";
 
 /* ======================================================
    CREATE PRODUCT
@@ -11,7 +11,8 @@ export const createProduct = async (req: Request, res: Response) => {
     const {
       name,
       description,
-      audience,
+      gender,
+      department,
       productType,
       isActive,
       colors,
@@ -20,17 +21,17 @@ export const createProduct = async (req: Request, res: Response) => {
 
     /* ---------- VALIDATION ---------- */
 
-    if (!name || !audience || !productType || !colors) {
+    if (!name || !gender || !department || !productType || !colors) {
       return res.status(400).json({
         success: false,
         message: "Missing required fields",
       });
     }
 
-    if (!Object.values(AudienceCategory).includes(audience)) {
+    if (!Object.values(Gender).includes(gender)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid audience category",
+        message: "Invalid gender",
       });
     }
 
@@ -110,7 +111,8 @@ export const createProduct = async (req: Request, res: Response) => {
     const product = await productService.createProduct({
       name: name.trim(),
       description: description?.trim() || null,
-      audience,
+      gender,
+      department,
       productType,
       isActive: isActive !== "false",
       images: productImages,
@@ -158,7 +160,7 @@ export const getAllProducts = async (_req: Request, res: Response) => {
 
 export const getProductById = async (req: Request, res: Response) => {
   try {
-    const product = await productService.getProductById(req.params.id);
+    const product = await productService.getProductById(req.params.id as string);
 
     if (!product) {
       return res.status(404).json({
@@ -187,7 +189,7 @@ export const getProductById = async (req: Request, res: Response) => {
 export const updateProduct = async (req: Request, res: Response) => {
   try {
     const product = await productService.updateProduct(
-      req.params.id,
+      req.params.id as string,
       req.body
     );
 
@@ -216,7 +218,7 @@ export const updateProductStatus = async (
     const { isActive } = req.body;
 
     const product = await productService.updateProductStatus(
-      req.params.id,
+      req.params.id as string,
       Boolean(isActive)
     );
 
@@ -239,7 +241,7 @@ export const updateProductStatus = async (
 
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
-    await productService.deleteProduct(req.params.id);
+    await productService.deleteProduct(req.params.id as string);
 
     return res.status(200).json({
       success: true,

@@ -360,21 +360,6 @@ export default function ProductClient({
                         </div>
                       )}
 
-                      {/* Quality Indicator */}
-                      {metadata && (
-                        <div className="absolute top-1 right-1">
-                          {isHighRes ? (
-                            <div className="bg-green-500 text-white text-xs px-1 py-0.5 rounded font-bold">
-                              HD
-                            </div>
-                          ) : (
-                            <div className="bg-blue-500 text-white text-xs px-1 py-0.5 rounded font-bold">
-                              SD
-                            </div>
-                          )}
-                        </div>
-                      )}
-
                       {/* Hover Details */}
                       <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <div className="text-center">
@@ -540,17 +525,10 @@ export default function ProductClient({
                         </div>
                       )}
 
-                      {/* Quality & Resolution Badges */}
+                      {/* Resolution Badge */}
                       {metadata && (
                         <>
-                          <div className="absolute top-4 left-4 flex gap-2">
-                            <div className={`px-3 py-1 rounded-full text-sm font-bold shadow-lg ${
-                              isHighRes
-                                ? 'bg-green-500 text-white'
-                                : 'bg-blue-500 text-white'
-                            }`}>
-                              {isHighRes ? 'HD' : 'SD'}
-                            </div>
+                          <div className="absolute top-4 left-4">
                             <div className="bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-medium">
                               {metadata.width}×{metadata.height}
                             </div>
@@ -767,27 +745,17 @@ export default function ProductClient({
           {/* SHIPPING POLICY */}
           <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-2">🚚 Shipping Policy</h3>
-            <ul className="text-sm text-gray-700 space-y-2">
-              <li>✓ Free shipping on orders above ₹500</li>
-              <li>✓ Standard delivery: 5-7 business days</li>
-              <li>✓ Express delivery: 2-3 business days (extra charges apply)</li>
-              <li>✓ Orders are shipped Monday-Friday</li>
-              <li>✓ We ship to all major cities across India</li>
-              <li>✓ Track your order in real-time</li>
-            </ul>
+            <div className="text-sm text-gray-700 space-y-1 whitespace-pre-line">
+              {product.shippingPolicy || "Free shipping on orders above ₹500\nStandard delivery: 5-7 business days\nExpress delivery: 2-3 business days (extra charges apply)"}
+            </div>
           </div>
 
           {/* RETURN POLICY */}
           <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900 mb-2">↩️ Return & Exchange Policy</h3>
-            <ul className="text-sm text-gray-700 space-y-2">
-              <li>✓ 30-day return window from delivery date</li>
-              <li>✓ Product must be unused and in original packaging</li>
-              <li>✓ Free return shipping for defective items</li>
-              <li>✓ Exchange available for size or color variations</li>
-              <li>✓ Refunds processed within 7-10 business days</li>
-              <li>✓ Contact our support team for return authorization</li>
-            </ul>
+            <div className="text-sm text-gray-700 space-y-1 whitespace-pre-line">
+              {product.returnPolicy || "30-day return window from delivery date\nProduct must be unused and in original packaging\nFree return shipping for defective items"}
+            </div>
           </div>
         </div>
       </div>
@@ -840,13 +808,6 @@ export default function ProductClient({
                     {/* Enhanced Zoom Info */}
                     <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
                       <div className="flex gap-2">
-                        <div className={`px-3 py-1 rounded-full text-sm font-bold shadow-lg ${
-                          isHighRes
-                            ? 'bg-green-500 text-white'
-                            : 'bg-blue-500 text-white'
-                        }`}>
-                          {isHighRes ? 'HD Quality' : 'SD Quality'}
-                        </div>
                         <div className="bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-medium">
                           {currentIndex} of {images.length}
                         </div>

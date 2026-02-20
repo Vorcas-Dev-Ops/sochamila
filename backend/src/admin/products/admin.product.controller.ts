@@ -18,6 +18,8 @@ export const createProduct = async (req: Request, res: Response) => {
       colors,
       productImageCount,
       imagePositions,
+      shippingPolicy,
+      returnPolicy,
     } = req.body;
 
     /* ---------- VALIDATION ---------- */
@@ -127,6 +129,8 @@ export const createProduct = async (req: Request, res: Response) => {
       department,
       productType,
       isActive: isActive !== "false",
+      shippingPolicy: shippingPolicy?.trim() || undefined,
+      returnPolicy: returnPolicy?.trim() || undefined,
       images: productImages,
       colors: colorsWithImages,
     });

@@ -61,5 +61,8 @@ export interface Product {
   isActive: boolean;
   isAvailable: boolean;
 
+  shippingPolicy?: string;
+  returnPolicy?: string;
+
   variants: ProductVariant[];
 }

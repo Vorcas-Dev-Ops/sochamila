@@ -326,6 +326,8 @@ export default function AddProductPage() {
     gender: "",
     department: "",
     productType: "",
+    shippingPolicy: "Free shipping on orders above ₹500\nStandard delivery: 5-7 business days\nExpress delivery: 2-3 business days (extra charges apply)",
+    returnPolicy: "30-day return window from delivery date\nProduct must be unused and in original packaging\nFree return shipping for defective items",
   });
 
   const [colors, setColors] = useState<ColorVariant[]>([
@@ -489,6 +491,8 @@ export default function AddProductPage() {
       form.append("gender", product.gender);
       form.append("department", product.department);
       form.append("productType", product.productType);
+      form.append("shippingPolicy", product.shippingPolicy);
+      form.append("returnPolicy", product.returnPolicy);
 
       // REQUIRED BY BACKEND
       form.append("productImageCount", images.length.toString());
@@ -813,6 +817,42 @@ export default function AddProductPage() {
                   <Plus className="w-5 h-5" />
                   Add Another Color
                 </button>
+              </div>
+            </SectionCard>
+
+            {/* Shipping & Return Policy */}
+            <SectionCard title="Policies" icon={Tag}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Shipping Policy
+                  </label>
+                  <textarea
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all resize-none text-sm"
+                    placeholder="Enter shipping policy..."
+                    value={product.shippingPolicy}
+                    onChange={e => setProduct({ ...product, shippingPolicy: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Default: Free shipping on orders above ₹500, 5-7 business days delivery
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Return Policy
+                  </label>
+                  <textarea
+                    rows={4}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all resize-none text-sm"
+                    placeholder="Enter return policy..."
+                    value={product.returnPolicy}
+                    onChange={e => setProduct({ ...product, returnPolicy: e.target.value })}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Default: 30-day return window, product must be unused
+                  </p>
+                </div>
               </div>
             </SectionCard>
           </div>

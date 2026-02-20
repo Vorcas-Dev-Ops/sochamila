@@ -31,11 +31,14 @@ type Product = {
   id: string;
   name: string;
   description?: string | null;
-  audience: string;
+  gender: string;
+  department: string;
   productType: string;
   isActive: boolean;
   images: Image[];
   colors: Color[];
+  shippingPolicy?: string;
+  returnPolicy?: string;
 };
 
 /* ======================================================
@@ -162,6 +165,11 @@ export default function EditProductPage() {
       const payload = {
         name: product.name,
         description: product.description,
+        gender: product.gender,
+        department: product.department,
+        productType: product.productType,
+        shippingPolicy: product.shippingPolicy,
+        returnPolicy: product.returnPolicy,
         images: product.images.map((img, i) => ({
           imageUrl: img.imageUrl,
           sortOrder: i,
@@ -245,6 +253,64 @@ export default function EditProductPage() {
           className="w-full border rounded-lg px-4 py-2"
           placeholder="Description"
         />
+
+        {/* Gender & Department */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <select
+            value={product.gender}
+            onChange={e => setProduct({ ...product, gender: e.target.value })}
+            className="border rounded-lg px-4 py-2"
+          >
+            <option value="MEN">Men</option>
+            <option value="WOMEN">Women</option>
+            <option value="KIDS">Kids</option>
+            <option value="UNISEX">Unisex</option>
+          </select>
+
+          <select
+            value={product.department}
+            onChange={e => setProduct({ ...product, department: e.target.value })}
+            className="border rounded-lg px-4 py-2"
+          >
+            <option value="CLOTHING">Clothing</option>
+            <option value="ACCESSORIES">Accessories</option>
+            <option value="HOME">Home</option>
+          </select>
+
+          <input
+            value={product.productType}
+            onChange={e => setProduct({ ...product, productType: e.target.value })}
+            className="border rounded-lg px-4 py-2"
+            placeholder="Product Type (e.g., TSHIRT)"
+          />
+        </div>
+      </section>
+
+      {/* POLICIES */}
+      <section className="bg-white border rounded-2xl p-6 space-y-4">
+        <h2 className="font-semibold">Policies</h2>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Policy</label>
+          <textarea
+            value={product.shippingPolicy ?? ""}
+            onChange={e => setProduct({ ...product, shippingPolicy: e.target.value })}
+            rows={4}
+            className="w-full border rounded-lg px-4 py-2"
+            placeholder="Enter shipping policy..."
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Return Policy</label>
+          <textarea
+            value={product.returnPolicy ?? ""}
+            onChange={e => setProduct({ ...product, returnPolicy: e.target.value })}
+            rows={4}
+            className="w-full border rounded-lg px-4 py-2"
+            placeholder="Enter return policy..."
+          />
+        </div>
       </section>
 
       {/* PRODUCT IMAGES */}

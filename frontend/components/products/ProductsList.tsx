@@ -21,7 +21,8 @@ const GENDERS = [
 const CATEGORIES = [
   { value: "CLOTHING", label: "Clothing" },
   { value: "ACCESSORIES", label: "Accessories" },
-  { value: "HOME", label: "Home" },
+  { value: "HOME_LIVING", label: "Home & Living" },
+  { value: "GEAR", label: "Gear" },
 ];
 
 const PRODUCT_TYPES_BY_CATEGORY: Record<string, { value: string; label: string }[]> = {
@@ -35,9 +36,14 @@ const PRODUCT_TYPES_BY_CATEGORY: Record<string, { value: string; label: string }
   ACCESSORIES: [
     { value: "CAP", label: "Cap" },
     { value: "BAG", label: "Bag" },
+    { value: "PHONE_CASE", label: "Phone Case" },
   ],
-  HOME: [
+  HOME_LIVING: [
     { value: "MUG", label: "Mug" },
+  ],
+  GEAR: [
+    { value: "CAP", label: "Cap" },
+    { value: "BAG", label: "Bag" },
   ],
 };
 
@@ -50,6 +56,7 @@ const ALL_PRODUCT_TYPES = [
   { value: "CAP", label: "Cap" },
   { value: "MUG", label: "Mug" },
   { value: "BAG", label: "Bag" },
+  { value: "PHONE_CASE", label: "Phone Case" },
 ];
 
 const COLORS = [
@@ -829,8 +836,9 @@ function ProductCard({ product }: { product: Product }) {
   }, [isHovered, images.length]);
 
   return (
-    <div
-      className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-100 hover:border-teal-300 h-fit"
+    <Link
+      href={`/products/${product.id}`}
+      className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-100 hover:border-teal-300 h-fit block"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -870,8 +878,11 @@ function ProductCard({ product }: { product: Product }) {
 
         {/* Wishlist Button */}
         <button 
-          className="absolute top-2 right-2 p-1.5 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 shadow-md"
-          onClick={(e) => e.preventDefault()}
+          className="absolute top-2 right-2 p-1.5 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 shadow-md z-10"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
         >
           <Heart size={14} className="text-gray-500 hover:text-red-500 transition-colors" />
         </button>
@@ -921,6 +932,6 @@ function ProductCard({ product }: { product: Product }) {
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

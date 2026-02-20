@@ -55,6 +55,8 @@ export const createProduct = async (data: any) => {
       minPrice,
       isActive: data.isActive ?? true,
       isAvailable,
+      shippingPolicy: data.shippingPolicy,
+      returnPolicy: data.returnPolicy,
 
       /* PRODUCT IMAGES */
       images: Array.isArray(data.images)
@@ -180,6 +182,11 @@ export const updateProduct = async (id: string, data: any) => {
       data: {
         name: data.name?.trim(),
         description: data.description ?? null,
+        gender: data.gender,
+        department: data.department,
+        productType: data.productType,
+        shippingPolicy: data.shippingPolicy,
+        returnPolicy: data.returnPolicy,
       },
     });
 

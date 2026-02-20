@@ -306,10 +306,10 @@ export default function ProductClient({
                         setActiveImage(img.image);
                         setZoomImage(null);
                       }}
-                      className={`border-2 rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md relative ${
+                      className={`border-2 rounded-lg overflow-hidden transition-all duration-200 ${
                         activeImage === img.image
                           ? "ring-2 ring-teal-600 border-teal-600 shadow-lg"
-                          : "border-gray-300 hover:border-teal-400"
+                          : "border-gray-300"
                       }`}
                       title={`${viewLabel} view - Click to view details`}
                     >
@@ -334,23 +334,12 @@ export default function ProductClient({
                           </div>
                         </div>
                       )}
-
-                      {/* Hover Details */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <div className="text-center">
-                          {'Image Size'}
-                        </div>
-                      </div>
+                
                     </button>
-
-                    {/* View Label with Details */}
+                
+                    {/* View Label */}
                     <div className="text-xs text-gray-600 text-center mt-1 font-medium">
                       {viewLabel}
-                      {img && (
-                        <div className="text-gray-500 text-xs">
-                          Image Size
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
@@ -410,29 +399,11 @@ export default function ProductClient({
                             </div>
                           </div>
 
-                          {/* Image Info Overlay */}
-                          <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-80 text-white p-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <div className="flex justify-between items-center text-sm">
-                              <div>
-                                <div className="font-medium">{viewLabel} View</div>
-                                <div className="text-gray-300">
-                                  Image • Standard ratio • Medium size
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs text-gray-300">Click to zoom</div>
-                                <div className="text-lg">🔍</div>
-                              </div>
-                            </div>
-                          </div>
+                          
                         </>
                       )}
 
-                      {/* Zoom Indicator */}
-                      <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1">
-                        <span>🔍</span>
-                        <span>Click to zoom</span>
-                      </div>
+
 
                       {/* View Label */}
                       <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-lg text-sm font-medium shadow-md">
@@ -452,7 +423,7 @@ export default function ProductClient({
         </div>
 
         {/* RIGHT - PRODUCT INFO */}
-        <div className="space-y-6 overflow-y-auto pr-4 max-h-[600px]">
+        <div className="space-y-4">
           {/* TITLE & PRICE */}
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -468,9 +439,31 @@ export default function ProductClient({
             )}
           </div>
 
+          {/* DESCRIPTION */}
+          <div className="bg-gray-50 rounded-xl p-4">
+            <h3 className="font-semibold text-gray-900 mb-1">📋 Product Description</h3>
+            <div className="text-sm text-gray-700 leading-relaxed">
+              {product.description ? (
+                <div className={showFullDescription ? '' : 'line-clamp-3'}>
+                  {product.description}
+                </div>
+              ) : (
+                <p className="text-gray-500 italic">No description available for this product.</p>
+              )}
+              {product.description && product.description.length > MAX_DESC_LENGTH && (
+                <button 
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="mt-2 text-teal-600 hover:text-teal-700 font-medium text-sm"
+                >
+                  {showFullDescription ? 'Show Less' : 'Read More'}
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* QUANTITY */}
-          <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-            <p className="font-semibold text-gray-900 mb-3">
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="font-semibold text-gray-900 mb-1">
               Quantity
             </p>
             <div className="flex gap-4 items-center">
@@ -495,8 +488,8 @@ export default function ProductClient({
           </div>
 
           {/* COLOR SELECTION */}
-          <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-            <p className="font-semibold text-gray-900 mb-3">
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="font-semibold text-gray-900 mb-1">
               Color: <span className="capitalize text-teal-600">{selectedColor || 'Select'}</span>
             </p>
             <div className="flex gap-3 flex-wrap">
@@ -520,8 +513,8 @@ export default function ProductClient({
           </div>
 
           {/* SIZE SELECTION */}
-          <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-            <p className="font-semibold text-gray-900 mb-3">
+          <div className="bg-gray-50 rounded-xl p-2">
+            <p className="font-semibold text-gray-900 mb-1">
               Size: <span className="text-teal-600">{selectedSize || 'Select'}</span>
             </p>
             <div className="flex gap-2 flex-wrap">
@@ -593,8 +586,14 @@ export default function ProductClient({
             )}
           </div>
 
-          {/* SEPARATOR SECTION */}
-          <div className="border-t border-gray-200 my-8"></div>
+        </div>
+               
+        
+        
+               
+              
+      </div>
+      <div className="border-t border-gray-200 my-8"></div>
 
           {/* POLICIES AND RELATED PRODUCTS SECTION */}
           <div className="space-y-6">
@@ -706,8 +705,6 @@ export default function ProductClient({
               )}
             </div>
           </div>
-        </div>
-      </div>
 
       {/* ZOOM MODAL */}
       {zoomImage && (
@@ -767,32 +764,7 @@ export default function ProductClient({
                       </button>
                     </div>
 
-                    {/* Detailed Image Info */}
-                    {zoomImageData && (
-                      <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg max-w-md">
-                        <div className="font-medium text-lg mb-2">{viewLabel} View</div>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span>Resolution:</span>
-                            <span className="font-medium">Image Details</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Aspect Ratio:</span>
-                            <span className="font-medium">Standard</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Format:</span>
-                            <span className="font-medium">JPG/PNG</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Quality:</span>
-                            <span className="font-medium text-blue-400">
-                              Standard Resolution
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+
 
                     {/* Zoom Instructions */}
                     <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-4 py-2 rounded-lg text-sm text-center max-w-xs">

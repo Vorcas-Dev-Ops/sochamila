@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSizeById = exports.getProductById = exports.getProducts = void 0;
+exports.getRelatedProducts = exports.getSizeById = exports.getProductById = exports.getProducts = void 0;
 const productService = __importStar(require("./product.service"));
 const asyncHandler_1 = require("../../utils/asyncHandler");
 const response_1 = require("../../utils/response");
@@ -61,7 +61,7 @@ exports.getProducts = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
    GET SINGLE PRODUCT BY ID
 ====================================================== */
 exports.getProductById = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const id = req.params.id?.trim();
+    const id = typeof req.params.id === 'string' ? req.params.id.trim() : '';
     if (!id) {
         return (0, response_1.sendError)(res, "Product ID is required", 400);
     }
@@ -84,7 +84,7 @@ exports.getProductById = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
    GET SIZE BY ID (for checkout page)
 ====================================================== */
 exports.getSizeById = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
-    const id = req.params.id?.trim();
+    const id = typeof req.params.id === 'string' ? req.params.id.trim() : '';
     if (!id) {
         return (0, response_1.sendError)(res, "Size ID is required", 400);
     }
@@ -101,5 +101,35 @@ exports.getSizeById = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
             return (0, response_1.sendError)(res, "Database unavailable", 503);
         }
         return (0, response_1.sendError)(res, "Failed to fetch size", 500);
+    }
+});
+/* ======================================================
+   GET RELATED PRODUCTS
+====================================================== */
+exports.getRelatedProducts = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    const id = typeof req.params.id === 'string' ? req.params.id.trim() : '';
+    if (!id) {
+        return (0, response_1.sendError)(res, "Product ID is required", 400);
+    }
+    try {
+        // First get the product to get its department
+        const product = await productService.getPublicProductById(id);
+        if (!product) {
+            return (0, response_1.sendError)(res, "Product not found", 404);
+        }
+        // Get limit from query params, default to 4
+        const limit = Number(req.query.limit) || 4;
+        const relatedProducts = await productService.getRelatedProducts(id, product.department, limit);
+        return (0, response_1.sendSuccess)(res, "Related products fetched successfully", {
+            relatedProducts,
+            count: relatedProducts.length
+        });
+    }
+    catch (error) {
+        console.error("RELATED PRODUCTS ERROR:", error);
+        if (error.message && error.message.includes("Can't reach database")) {
+            return (0, response_1.sendError)(res, "Database unavailable", 503);
+        }
+        return (0, response_1.sendError)(res, "Failed to fetch related products", 500);
     }
 });

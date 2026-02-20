@@ -213,3 +213,58 @@ export const getSizeById = async (
     price: size.price,
   };
 };
+
+/* ======================================================
+   GET RELATED PRODUCTS
+====================================================== */
+
+export const getRelatedProducts = async (
+  productId: string,
+  department: string,
+  limit = 4
+): Promise<ShopProduct[]> => {
+  if (!productId || !department) return [];
+
+  try {
+    const relatedProducts = await prisma.product.findMany({
+      where: {
+        id: { not: productId }, // Exclude the current product
+        department: department as any, // Type assertion since department comes from the frontend
+        isActive: true,
+        isAvailable: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+      include: {
+        // Product-level images
+        images: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        colors: {
+          include: {
+            // Color-specific images
+            images: {
+              orderBy: { sortOrder: 'asc' },
+            },
+            sizes: {
+              where: {
+                isActive: true,
+                stock: { gt: 0 },
+              },
+              orderBy: {
+                price: 'asc',
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return relatedProducts.map(formatProduct);
+  } catch (error) {
+    console.error('Error fetching related products:', error);
+    return [];
+  }
+};

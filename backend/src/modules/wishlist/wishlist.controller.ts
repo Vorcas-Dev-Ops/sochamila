@@ -36,7 +36,7 @@ export async function removeWishlistItemController(req: Request, res: Response) 
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     const itemId = req.params.id;
-    const updated = await removeUserWishlistService(userId, itemId);
+    const updated = await removeUserWishlistService(userId, typeof itemId === 'string' ? itemId : '');
     return res.json({ success: true, data: updated });
   } catch (err: any) {
     console.error("[WISHLIST] Remove error:", err);

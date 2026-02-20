@@ -33,7 +33,7 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
 ====================================================== */
 
 export const getProductById = asyncHandler(async (req: Request, res: Response) => {
-  const id = req.params.id?.trim();
+  const id = typeof req.params.id === 'string' ? req.params.id.trim() : '';
 
   if (!id) {
     return sendError(res, "Product ID is required", 400);
@@ -61,7 +61,7 @@ export const getProductById = asyncHandler(async (req: Request, res: Response) =
 ====================================================== */
 
 export const getSizeById = asyncHandler(async (req: Request, res: Response) => {
-  const id = req.params.id?.trim();
+  const id = typeof req.params.id === 'string' ? req.params.id.trim() : '';
 
   if (!id) {
     return sendError(res, "Size ID is required", 400);
@@ -81,5 +81,42 @@ export const getSizeById = asyncHandler(async (req: Request, res: Response) => {
       return sendError(res, "Database unavailable", 503);
     }
     return sendError(res, "Failed to fetch size", 500);
+  }
+});
+
+/* ======================================================
+   GET RELATED PRODUCTS
+====================================================== */
+
+export const getRelatedProducts = asyncHandler(async (req: Request, res: Response) => {
+  const id = typeof req.params.id === 'string' ? req.params.id.trim() : '';
+  
+  if (!id) {
+    return sendError(res, "Product ID is required", 400);
+  }
+  
+  try {
+    // First get the product to get its department
+    const product = await productService.getPublicProductById(id);
+    
+    if (!product) {
+      return sendError(res, "Product not found", 404);
+    }
+    
+    // Get limit from query params, default to 4
+    const limit = Number(req.query.limit) || 4;
+    
+    const relatedProducts = await productService.getRelatedProducts(id, product.department, limit);
+    
+    return sendSuccess(res, "Related products fetched successfully", {
+      relatedProducts,
+      count: relatedProducts.length
+    });
+  } catch (error: any) {
+    console.error("RELATED PRODUCTS ERROR:", error);
+    if (error.message && error.message.includes("Can't reach database")) {
+      return sendError(res, "Database unavailable", 503);
+    }
+    return sendError(res, "Failed to fetch related products", 500);
   }
 });

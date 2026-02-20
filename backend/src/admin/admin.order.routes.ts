@@ -51,7 +51,7 @@ router.post("/assign/:orderItemId", async (req: Request, res: Response) => {
     }
 
     const updatedItem = await prisma.orderItem.update({
-      where: { id: orderItemId },
+      where: { id: typeof orderItemId === 'string' ? orderItemId : '' },
       data: { vendorId },
     });
 
@@ -92,7 +92,7 @@ router.patch('/:orderId/status', async (req: Request, res: Response) => {
     }
 
     const updated = await prisma.order.update({
-      where: { id: orderId },
+      where: { id: typeof orderId === 'string' ? orderId : '' },
       data: { status: status as any },
       include: {
         user: true,
@@ -125,7 +125,7 @@ router.get("/:orderId/designs", async (req: Request, res: Response) => {
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: typeof orderId === 'string' ? orderId : '' },
       include: {
         user: {
           select: { id: true, name: true, email: true },

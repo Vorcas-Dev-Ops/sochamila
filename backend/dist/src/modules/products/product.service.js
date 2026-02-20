@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSizeById = exports.getPublicProductById = exports.getAllPublicProducts = void 0;
+exports.getRelatedProducts = exports.getSizeById = exports.getPublicProductById = exports.getAllPublicProducts = void 0;
 const prisma_1 = require("../../config/prisma");
 /* ======================================================
    TYPES
@@ -165,3 +165,53 @@ const getSizeById = async (sizeId) => {
     };
 };
 exports.getSizeById = getSizeById;
+/* ======================================================
+   GET RELATED PRODUCTS
+====================================================== */
+const getRelatedProducts = async (productId, department, limit = 4) => {
+    if (!productId || !department)
+        return [];
+    try {
+        const relatedProducts = await prisma_1.prisma.product.findMany({
+            where: {
+                id: { not: productId }, // Exclude the current product
+                department: department, // Type assertion since department comes from the frontend
+                isActive: true,
+                isAvailable: true,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+            take: limit,
+            include: {
+                // Product-level images
+                images: {
+                    orderBy: { sortOrder: 'asc' },
+                },
+                colors: {
+                    include: {
+                        // Color-specific images
+                        images: {
+                            orderBy: { sortOrder: 'asc' },
+                        },
+                        sizes: {
+                            where: {
+                                isActive: true,
+                                stock: { gt: 0 },
+                            },
+                            orderBy: {
+                                price: 'asc',
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        return relatedProducts.map(formatProduct);
+    }
+    catch (error) {
+        console.error('Error fetching related products:', error);
+        return [];
+    }
+};
+exports.getRelatedProducts = getRelatedProducts;

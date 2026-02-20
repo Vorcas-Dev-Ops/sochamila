@@ -31,7 +31,7 @@ const getOrderDesigns = async (req, res) => {
             return res.status(400).json({ error: "Order ID is required" });
         }
         const order = await prisma_1.default.order.findUnique({
-            where: { id: orderId },
+            where: { id: typeof orderId === 'string' ? orderId : '' },
             include: {
                 user: { select: { id: true, name: true, email: true } },
                 items: {

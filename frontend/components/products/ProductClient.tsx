@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Product } from "@/types/product";
 import api from "@/lib/axios";
 import { useAuth } from "@/lib/useAuth";
 import { useCart } from "@/lib/cart";
+import { Heart, ShoppingBag } from "lucide-react";
 
 /* ======================================================
    CONFIG
@@ -120,8 +122,7 @@ export default function ProductClient({
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [imageLoading, setImageLoading] = useState<Set<string>>(new Set());
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [imageMetadata, setImageMetadata] = useState<Map<string, any>>(new Map());
-  const [showImageDetails, setShowImageDetails] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
 
   // Navigation functions for zoom modal
   const navigateZoomImage = (direction: 'prev' | 'next') => {
@@ -138,24 +139,7 @@ export default function ProductClient({
     setZoomImage(images[newIndex].image);
   };
 
-  // Load image metadata
-  const loadImageMetadata = async (imagePath: string) => {
-    try {
-      const img = new Image();
-      img.onload = () => {
-        setImageMetadata(prev => new Map(prev).set(imagePath, {
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-          aspectRatio: (img.naturalWidth / img.naturalHeight).toFixed(2),
-          fileSize: 'Unknown', // Would need server-side info for this
-          format: imagePath.split('.').pop()?.toUpperCase() || 'Unknown'
-        }));
-      };
-      img.src = getImageUrl(imagePath) || '';
-    } catch (error) {
-      console.error('Failed to load image metadata:', error);
-    }
-  };
+
 
   // Keyboard navigation for zoom modal
   useEffect(() => {
@@ -209,13 +193,6 @@ export default function ProductClient({
       setFailedImages(new Set());
       setImageLoading(new Set());
       setZoomImage(null);
-
-      // Load metadata for all images
-      images.forEach(img => {
-        if (!imageMetadata.has(img.image)) {
-          loadImageMetadata(img.image);
-        }
-      });
 
       console.log('[ProductClient] Images for selected variant:', {
         selectedColor,
@@ -321,8 +298,6 @@ export default function ProductClient({
                 const hasFailed = failedImages.has(img.image);
                 const viewLabel = img.view ? img.view.charAt(0).toUpperCase() + img.view.slice(1).toLowerCase() : `View ${i + 1}`;
                 const altText = `${product.name} - ${selectedColor ? selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1) : 'Product'} - ${viewLabel}`;
-                const metadata = imageMetadata.get(img.image);
-                const isHighRes = metadata && metadata.width >= 1000;
 
                 return (
                   <div key={i} className="relative group">
@@ -363,7 +338,7 @@ export default function ProductClient({
                       {/* Hover Details */}
                       <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <div className="text-center">
-                          {metadata ? `${metadata.width}×${metadata.height}` : 'Loading...'}
+                          {'Image Size'}
                         </div>
                       </div>
                     </button>
@@ -371,9 +346,9 @@ export default function ProductClient({
                     {/* View Label with Details */}
                     <div className="text-xs text-gray-600 text-center mt-1 font-medium">
                       {viewLabel}
-                      {metadata && (
+                      {img && (
                         <div className="text-gray-500 text-xs">
-                          {metadata.width}×{metadata.height}
+                          Image Size
                         </div>
                       )}
                     </div>
@@ -386,104 +361,7 @@ export default function ProductClient({
               </div>
             )}
 
-            {/* Image Details Toggle */}
-            {images.length > 0 && (
-              <button
-                onClick={() => setShowImageDetails(!showImageDetails)}
-                className="mt-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors duration-200 flex items-center gap-2"
-              >
-                <span>📊</span>
-                <span>{showImageDetails ? 'Hide' : 'Show'} Image Details</span>
-              </button>
-            )}
 
-            {/* IMAGE DETAILS PANEL */}
-            {showImageDetails && images.length > 0 && (
-              <div className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span>🖼️</span>
-                  Product Image Details
-                </h3>
-
-                <div className="space-y-3">
-                  {images.map((img, i) => {
-                    const metadata = imageMetadata.get(img.image);
-                    const viewLabel = img.view ? img.view.charAt(0).toUpperCase() + img.view.slice(1).toLowerCase() : `View ${i + 1}`;
-                    const isHighRes = metadata && metadata.width >= 1000;
-
-                    return (
-                      <div key={i} className={`p-3 rounded-lg border transition-colors ${
-                        activeImage === img.image
-                          ? 'bg-teal-50 border-teal-300'
-                          : 'bg-white border-gray-200'
-                      }`}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900 mb-1">
-                              {viewLabel} View
-                            </div>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              {metadata ? (
-                                <>
-                                  <div className="flex items-center gap-4">
-                                    <span>📐 {metadata.width} × {metadata.height} px</span>
-                                    <span>📏 Ratio: {metadata.aspectRatio}</span>
-                                    <span>📁 Format: {metadata.format}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      isHighRes
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-blue-100 text-blue-800'
-                                    }`}>
-                                      {isHighRes ? 'High Resolution' : 'Standard Resolution'}
-                                    </span>
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                                      {metadata.width * metadata.height > 1000000 ? 'Large' : 'Medium'} Size
-                                    </span>
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="text-gray-500">Loading image metadata...</div>
-                              )}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => setActiveImage(img.image)}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                              activeImage === img.image
-                                ? 'bg-teal-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
-                            {activeImage === img.image ? 'Active' : 'View'}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Summary Stats */}
-                <div className="mt-4 pt-3 border-t border-gray-200">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-900">Total Images:</span>
-                      <span className="ml-2 text-gray-700">{images.length}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-900">High Res:</span>
-                      <span className="ml-2 text-gray-700">
-                        {images.filter(img => {
-                          const metadata = imageMetadata.get(img.image);
-                          return metadata && metadata.width >= 1000;
-                        }).length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* MAIN IMAGE */}
@@ -497,8 +375,6 @@ export default function ProductClient({
                   const hasFailed = failedImages.has(activeImage);
                   const viewLabel = activeImageData?.view ? activeImageData.view.charAt(0).toUpperCase() + activeImageData.view.slice(1).toLowerCase() : 'Product';
                   const altText = `${product.name} - ${selectedColor ? selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1) : 'Product'} - ${viewLabel} view`;
-                  const metadata = imageMetadata.get(activeImage);
-                  const isHighRes = metadata && metadata.width >= 1000;
 
                   return (
                     <div className="relative w-full h-full flex items-center justify-center group cursor-zoom-in"
@@ -526,11 +402,11 @@ export default function ProductClient({
                       )}
 
                       {/* Resolution Badge */}
-                      {metadata && (
+                      {activeImageData && (
                         <>
                           <div className="absolute top-4 left-4">
                             <div className="bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-sm font-medium">
-                              {metadata.width}×{metadata.height}
+                              Image Details
                             </div>
                           </div>
 
@@ -540,9 +416,7 @@ export default function ProductClient({
                               <div>
                                 <div className="font-medium">{viewLabel} View</div>
                                 <div className="text-gray-300">
-                                  {metadata.format} • {metadata.aspectRatio} ratio • {
-                                    metadata.width * metadata.height > 1000000 ? 'Large' : 'Medium'
-                                  } size
+                                  Image • Standard ratio • Medium size
                                 </div>
                               </div>
                               <div className="text-right">
@@ -719,42 +593,117 @@ export default function ProductClient({
             )}
           </div>
 
-          {/* DESCRIPTION */}
-          {product.description && (
-            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mt-6">
-              <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
-              <p className="text-gray-700 leading-relaxed">
-                {product.description.length > MAX_DESC_LENGTH && !showFullDescription
-                  ? `${product.description.slice(0, MAX_DESC_LENGTH).trim()}...`
-                  : product.description}
-              </p>
+          {/* SEPARATOR SECTION */}
+          <div className="border-t border-gray-200 my-8"></div>
 
-              {product.description.length > MAX_DESC_LENGTH && (
-                <div className="mt-3">
-                  <button
-                    onClick={() => setShowFullDescription((s) => !s)}
-                    className="text-sm font-semibold text-teal-600 hover:underline"
+          {/* POLICIES AND RELATED PRODUCTS SECTION */}
+          <div className="space-y-6">
+            {/* SHIPPING POLICY */}
+            <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-2">🚚 Shipping Policy</h3>
+              <div className="text-sm text-gray-700 space-y-1 whitespace-pre-line">
+                {product.shippingPolicy || "Free shipping on orders above ₹500\nStandard delivery: 5-7 business days\nExpress delivery: 2-3 business days (extra charges apply)"}
+              </div>
+            </div>
+            
+            {/* RETURN POLICY */}
+            <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-2">↩️ Return & Exchange Policy</h3>
+              <div className="text-sm text-gray-700 space-y-1 whitespace-pre-line">
+                {product.returnPolicy || "30-day return window from delivery date\nProduct must be unused and in original packaging\nFree return shipping for defective items"}
+              </div>
+            </div>
+            
+            {/* RELATED PRODUCTS */}
+            <div className="pt-4">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <span>🔥</span>
+                <span>You might also like</span>
+              </h3>
+              
+              {relatedProducts.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {relatedProducts.map((p: Product) => (
+                    <Link 
+                      href={`/products/${p.id}`}
+                      key={p.id}
+                      className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 border border-gray-100 hover:border-teal-300 h-fit block"
+                    >
+                      <div className="relative aspect-square bg-gray-50 overflow-hidden">
+                        {p.thumbnail ? (
+                          <img
+                            src={getImageUrl(p.thumbnail) || undefined}
+                            alt={p.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23e5e7eb' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%239ca3af' font-family='system-ui' font-size='14'%3EImage not found%3C/text%3E%3C/svg%3E";
+                            }}
+                          />
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-gray-300">
+                            <ShoppingBag size={32} className="opacity-20" />
+                          </div>
+                        )}
+                        
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                        
+                        <button 
+                          className="absolute top-2 right-2 p-1.5 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 shadow-md z-10"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Handle wishlist toggle
+                            if (!user) {
+                              router.push('/login');
+                              return;
+                            }
+                            // Wishlist functionality would go here
+                          }}
+                        >
+                          <Heart size={14} className="text-gray-500 hover:text-red-500 transition-colors" />
+                        </button>
+                      </div>
+                      
+                      <div className="p-3">
+                        <h4 className="text-xs font-medium text-gray-700 line-clamp-1 group-hover:text-teal-600 transition-colors">
+                          {p.name}
+                        </h4>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs font-bold text-gray-900">
+                            ₹{p.minPrice}
+                          </p>
+                          <div className="flex items-center gap-0.5">
+                            {p.variants.slice(0, 2).map((v: any, idx: number) => (
+                              <span
+                                key={idx}
+                                className="w-2 h-2 rounded-full border border-gray-200"
+                                style={{ backgroundColor: v.color.toLowerCase() }}
+                              />
+                            ))}
+                            {p.variants.length > 2 && (
+                              <span className="text-[8px] text-gray-400">+{p.variants.length - 2}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="text-5xl mb-4">🛒</div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">No related products found</h4>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    We couldn't find any other products in this category. Check out our full collection!
+                  </p>
+                  <Link 
+                    href="/products" 
+                    className="inline-block mt-4 px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
                   >
-                    {showFullDescription ? 'Show less' : 'Read more'}
-                  </button>
+                    Browse All Products
+                  </Link>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* SHIPPING POLICY */}
-          <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-2">🚚 Shipping Policy</h3>
-            <div className="text-sm text-gray-700 space-y-1 whitespace-pre-line">
-              {product.shippingPolicy || "Free shipping on orders above ₹500\nStandard delivery: 5-7 business days\nExpress delivery: 2-3 business days (extra charges apply)"}
-            </div>
-          </div>
-
-          {/* RETURN POLICY */}
-          <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-2">↩️ Return & Exchange Policy</h3>
-            <div className="text-sm text-gray-700 space-y-1 whitespace-pre-line">
-              {product.returnPolicy || "30-day return window from delivery date\nProduct must be unused and in original packaging\nFree return shipping for defective items"}
             </div>
           </div>
         </div>
@@ -793,8 +742,6 @@ export default function ProductClient({
                 const currentIndex = images.findIndex(img => img.image === zoomImage) + 1;
                 const viewLabel = zoomImageData?.view ? zoomImageData.view.charAt(0).toUpperCase() + zoomImageData.view.slice(1).toLowerCase() : 'Product';
                 const altText = `${product.name} - ${selectedColor ? selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1) : 'Product'} - ${viewLabel} view (zoomed)`;
-                const metadata = imageMetadata.get(zoomImage);
-                const isHighRes = metadata && metadata.width >= 1000;
 
                 return (
                   <div className="relative">
@@ -821,26 +768,26 @@ export default function ProductClient({
                     </div>
 
                     {/* Detailed Image Info */}
-                    {metadata && (
+                    {zoomImageData && (
                       <div className="absolute bottom-4 left-4 bg-black bg-opacity-80 text-white p-4 rounded-lg max-w-md">
                         <div className="font-medium text-lg mb-2">{viewLabel} View</div>
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span>Resolution:</span>
-                            <span className="font-medium">{metadata.width} × {metadata.height} px</span>
+                            <span className="font-medium">Image Details</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Aspect Ratio:</span>
-                            <span className="font-medium">{metadata.aspectRatio}:1</span>
+                            <span className="font-medium">Standard</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Format:</span>
-                            <span className="font-medium">{metadata.format}</span>
+                            <span className="font-medium">JPG/PNG</span>
                           </div>
                           <div className="flex justify-between">
                             <span>Quality:</span>
-                            <span className={`font-medium ${isHighRes ? 'text-green-400' : 'text-blue-400'}`}>
-                              {isHighRes ? 'High Resolution' : 'Standard Resolution'}
+                            <span className="font-medium text-blue-400">
+                              Standard Resolution
                             </span>
                           </div>
                         </div>
@@ -851,9 +798,9 @@ export default function ProductClient({
                     <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white px-4 py-2 rounded-lg text-sm text-center max-w-xs">
                       <div>Click outside or press ESC to close</div>
                       {images.length > 1 && <div className="mt-1">Use arrow keys to navigate</div>}
-                      {metadata && (
+                      {zoomImageData && (
                         <div className="mt-2 text-xs text-gray-300">
-                          {metadata.width > 1920 ? 'Ultra HD' : metadata.width > 1280 ? 'Full HD' : 'HD'} • {metadata.format}
+                          Standard Quality • JPG/PNG
                         </div>
                       )}
                     </div>

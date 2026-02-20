@@ -49,7 +49,7 @@ router.post("/assign/:orderItemId", async (req, res) => {
             return res.status(400).json({ success: false, message: "vendorId is required" });
         }
         const updatedItem = await prisma_1.default.orderItem.update({
-            where: { id: orderItemId },
+            where: { id: typeof orderItemId === 'string' ? orderItemId : '' },
             data: { vendorId },
         });
         // Update order status to ASSIGNED
@@ -84,7 +84,7 @@ router.patch('/:orderId/status', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid status' });
         }
         const updated = await prisma_1.default.order.update({
-            where: { id: orderId },
+            where: { id: typeof orderId === 'string' ? orderId : '' },
             data: { status: status },
             include: {
                 user: true,
@@ -113,7 +113,7 @@ router.get("/:orderId/designs", async (req, res) => {
                 .json({ success: false, message: "Order ID is required" });
         }
         const order = await prisma_1.default.order.findUnique({
-            where: { id: orderId },
+            where: { id: typeof orderId === 'string' ? orderId : '' },
             include: {
                 user: {
                     select: { id: true, name: true, email: true },

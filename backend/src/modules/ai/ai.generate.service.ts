@@ -1,10 +1,11 @@
+import { GoogleGenAI } from "@google/genai";
 import { imagekit } from "../../lib/imagekit";
 
 /* ======================================================
-   HUGGING FACE AI IMAGE GENERATION SERVICE
+   GEMINI NANO BANANA (Image Generation)
+   Model: gemini-2.5-flash-image — fast, 1024px
+   See: https://ai.google.dev/gemini-api/docs/image-generation
 ====================================================== */
-
-const HF_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0";
 
 /* ================= TYPES ================= */
 
@@ -23,133 +24,80 @@ interface GenerationResult {
 /* ================= GENERATE IMAGE ================= */
 
 /**
- * Generate an image using Hugging Face Stable Diffusion XL (free)
+ * Generate an image using Google Gemini Nano Banana (gemini-2.5-flash-image)
  * and upload to ImageKit for permanent storage
  */
 export async function generateImage(
   options: GenerateImageOptions
 ): Promise<GenerationResult> {
-  const { prompt, negativePrompt = "blurry, bad quality, distorted" } = options;
-
-  const apiToken = process.env.HUGGINGFACE_API_TOKEN;
-  
-  console.log(`[AI] Token check: ${apiToken ? 'Token exists (' + apiToken.slice(0,10) + '...)' : 'NO TOKEN'}`);
-  
-  if (!apiToken) {
-    throw new Error("HUGGINGFACE_API_TOKEN is not configured. Please add it to your .env file.");
-  }
-
-  console.log(`[AI] Generating image for prompt: "${prompt.slice(0, 50)}..."`);
-
-  // 1. Call Hugging Face Inference API
-  const response = await fetch(HF_API_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        negative_prompt: negativePrompt,
-        num_inference_steps: 30,
-        guidance_scale: 7.5,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[AI] Hugging Face API error:`, errorText);
-    
-    // Handle model loading (503 error)
-    if (response.status === 503) {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.error?.includes("loading")) {
-        throw new Error("Model is loading. Please try again in ~20 seconds.");
-      }
-    }
-    
-    throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
-  }
-
-  // 2. Get image blob from response
-  const imageBlob = await response.blob();
-  const imageBuffer = Buffer.from(await imageBlob.arrayBuffer());
-  const base64Image = imageBuffer.toString("base64");
-
-  console.log(`[AI] Image generated, uploading to ImageKit...`);
-
-  // 3. Upload to ImageKit for permanent storage
-  const uploadResponse = await imagekit.upload({
-    file: base64Image,
-    fileName: `ai-${Date.now()}.png`,
-    folder: "/ai-generated",
-    tags: ["ai-generated", "stable-diffusion-xl"],
-  });
-
-  console.log(`[AI] Upload complete: ${uploadResponse.url}`);
-
-  return {
-    success: true,
-    url: uploadResponse.url,
-    prompt,
-    model: "stable-diffusion-xl",
-  };
-}
-
-/* ================= ALTERNATIVE: FASTER MODEL ================= */
-
-const HF_FAST_API_URL = "https://router.huggingface.co/hf-inference/models/runwayml/stable-diffusion-v1-5";
-
-/**
- * Generate with Stable Diffusion 1.5 (faster, lower quality)
- */
-export async function generateImageFast(
-  options: GenerateImageOptions
-): Promise<GenerationResult> {
   const { prompt } = options;
 
-  const apiToken = process.env.HUGGINGFACE_API_TOKEN;
-  
-  if (!apiToken) {
-    throw new Error("HUGGINGFACE_API_TOKEN is not configured");
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "GEMINI_API_KEY is not configured. Get a key at https://aistudio.google.com/apikey and add it to your .env file."
+    );
   }
 
-  const response = await fetch(HF_FAST_API_URL, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      inputs: prompt,
-    }),
-  });
+  const ai = new GoogleGenAI({ apiKey });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Hugging Face API error: ${response.status}`);
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-image",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+
+    const candidate = response.candidates?.[0];
+    if (!candidate?.content?.parts?.length) {
+      throw new Error("No image in Gemini response. Try a different prompt.");
+    }
+
+    let base64Image: string | null = null;
+    for (const part of candidate.content.parts) {
+      if (part.inlineData?.data) {
+        base64Image = part.inlineData.data;
+        break;
+      }
+    }
+
+    if (!base64Image) {
+      throw new Error("No image data in Gemini response. Try a different prompt.");
+    }
+
+    const uploadResponse = await imagekit.upload({
+      file: base64Image,
+      fileName: `ai-gemini-${Date.now()}.png`,
+      folder: "/ai-generated",
+      tags: ["ai-generated", "gemini-nano-banana"],
+    });
+
+    return {
+      success: true,
+      url: uploadResponse.url,
+      prompt,
+      model: "gemini-2.5-flash-image",
+    };
+  } catch (err: any) {
+    // Re-throw with clearer error message for quota issues
+    if (err?.status === 429 || err?.error?.code === 429) {
+      const quotaError = new Error(
+        `Gemini API quota exceeded: ${err?.error?.message || err?.message}. ` +
+        `If you see "limit: 0", image generation may not be enabled for your free tier project. ` +
+        `Check: https://ai.google.dev/gemini-api/docs/image-generation`
+      );
+      (quotaError as any).status = 429;
+      (quotaError as any).error = err?.error;
+      throw quotaError;
+    }
+    throw err;
   }
-
-  const imageBlob = await response.blob();
-  const imageBuffer = Buffer.from(await imageBlob.arrayBuffer());
-  const base64Image = imageBuffer.toString("base64");
-
-  const uploadResponse = await imagekit.upload({
-    file: base64Image,
-    fileName: `ai-fast-${Date.now()}.png`,
-    folder: "/ai-generated",
-    tags: ["ai-generated", "sd-1.5"],
-  });
-
-  return {
-    success: true,
-    url: uploadResponse.url,
-    prompt,
-    model: "stable-diffusion-1.5",
-  };
 }
 
-// Keep for backwards compatibility
-export const generateImageSDXL = generateImage;
+/**
+ * Pro model (higher quality, 2K/4K) — use when available in your region
+ */
+export async function generateImageSDXL(
+  options: GenerateImageOptions
+): Promise<GenerationResult> {
+  return generateImage(options);
+}

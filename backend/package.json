@@ -9,8 +9,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "ts-node prisma/seed.ts"
   },
-  "dependencies": {
-    "@prisma/client": "^6.19.2",
+"dependencies": {
+  "@google/genai": "^1.0.0",
+  "@prisma/client": "^6.19.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",

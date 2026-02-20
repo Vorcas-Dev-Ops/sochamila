@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import api from "@/lib/axios";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 /* ================= TYPES ================= */
 
@@ -21,10 +22,27 @@ type VendorForm = {
   upiId: string;
 };
 
+interface KYCVerificationResult {
+  valid: boolean;
+  message: string;
+  verified: boolean;
+}
+
+interface KYCVerification {
+  pan: KYCVerificationResult;
+  aadhaar: KYCVerificationResult;
+  gst?: KYCVerificationResult;
+  bankAccount?: KYCVerificationResult;
+  ifsc?: KYCVerificationResult;
+  upi?: KYCVerificationResult;
+}
+
 export default function VendorRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [payoutMethod, setPayoutMethod] = useState<"BANK" | "UPI">("BANK");
   const [error, setError] = useState<string | null>(null);
+  const [kycVerification, setKycVerification] = useState<KYCVerification | null>(null);
+  const [showKycDetails, setShowKycDetails] = useState(false);
 
   const [form, setForm] = useState<VendorForm>({
     firstName: "",
@@ -45,28 +63,56 @@ export default function VendorRegisterPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    // Clear KYC verification when form changes
+    if (kycVerification) {
+      setKycVerification(null);
+    }
   };
 
   const handleSubmit = async () => {
     try {
-      setError(null); // Clear previous errors
+      setError(null);
+      setKycVerification(null);
       setLoading(true);
 
-      await api.post("/vendor/register", {
+      const response = await api.post("/vendor/register", {
         ...form,
         payoutMethod,
         kycStatus: "PENDING",
       });
 
-      alert("Vendor registered successfully. Await admin approval.");
+      // Store KYC verification results
+      if (response.data?.data?.kycVerification) {
+        setKycVerification(response.data.data.kycVerification);
+      }
+
+      alert("Vendor registered successfully. All KYC documents verified. Await admin approval.");
       window.location.href = "/login";
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || "Unable to submit KYC.";
       setError(errorMessage);
+      
+      // If KYC verification failed, show the details
+      if (err.response?.data?.data?.kycVerification) {
+        setKycVerification(err.response.data.data.kycVerification);
+        setShowKycDetails(true);
+      }
+      
       console.error("Registration error:", errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderKYCStatus = (result: KYCVerificationResult | undefined, label: string) => {
+    if (!result) return null;
+    
+    return (
+      <div className={`flex items-center gap-2 text-sm ${result.valid ? 'text-green-600' : 'text-red-600'}`}>
+        {result.valid ? <CheckCircle size={16} /> : <XCircle size={16} />}
+        <span>{label}: {result.message}</span>
+      </div>
+    );
   };
 
   return (
@@ -151,6 +197,29 @@ export default function VendorRegisterPage() {
                 </div>
               )}
 
+              {/* KYC VERIFICATION DETAILS */}
+              {kycVerification && showKycDetails && (
+                <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-gray-700">KYC Verification Results:</p>
+                    <button 
+                      onClick={() => setShowKycDetails(false)}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Hide
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {renderKYCStatus(kycVerification.pan, "PAN")}
+                    {renderKYCStatus(kycVerification.aadhaar, "Aadhaar")}
+                    {kycVerification.gst && renderKYCStatus(kycVerification.gst, "GSTIN")}
+                    {kycVerification.bankAccount && renderKYCStatus(kycVerification.bankAccount, "Bank Account")}
+                    {kycVerification.ifsc && renderKYCStatus(kycVerification.ifsc, "IFSC")}
+                    {kycVerification.upi && renderKYCStatus(kycVerification.upi, "UPI")}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-6">
 
                 {/* PERSONAL INFO */}
@@ -192,10 +261,13 @@ export default function VendorRegisterPage() {
                   <h3 className="text-sm font-semibold text-indigo-600 mb-3 uppercase tracking-wider">
                     Compliance & Documents
                   </h3>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Your documents will be verified in real-time using secure verification services.
+                  </p>
 
-                  <input name="aadhaar" placeholder="Aadhaar Number" value={form.aadhaar} onChange={onChange} className="input-light" />
-                  <input name="pan" placeholder="PAN Number" value={form.pan} onChange={onChange} className="input-light mt-3" />
-                  <input name="gst" placeholder="GST Number (Optional)" value={form.gst} onChange={onChange} className="input-light mt-3" />
+                  <input name="aadhaar" placeholder="Aadhaar Number (12 digits)" value={form.aadhaar} onChange={onChange} className="input-light" maxLength={12} />
+                  <input name="pan" placeholder="PAN Number (e.g., ABCDE1234F)" value={form.pan} onChange={onChange} className="input-light mt-3" maxLength={10} />
+                  <input name="gst" placeholder="GST Number (Optional, e.g., 22AAAAA0000A1Z5)" value={form.gst} onChange={onChange} className="input-light mt-3" maxLength={15} />
                 </section>
 
                 {/* PAYOUT METHOD */}
@@ -234,9 +306,19 @@ export default function VendorRegisterPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="w-full mt-6 bg-linear-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-60"
+                  className="w-full mt-6 bg-linear-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-semibold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  {loading ? "⏳ Submitting KYC..." : "✓ Submit Vendor KYC"}
+                  {loading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Verifying KYC Documents...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={18} />
+                      Submit Vendor KYC
+                    </>
+                  )}
                 </button>
 
                 <p className="text-center text-sm text-gray-500">

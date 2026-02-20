@@ -126,7 +126,7 @@ export const vendorRegister = asyncHandler(async (req: Request, res: Response) =
       return sendError(res, "UPI payout requires upiId", 400);
     }
 
-    const { token, vendor } = await vendorRegisterService({
+    const { token, vendor, kycVerification } = await vendorRegisterService({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
@@ -144,10 +144,11 @@ export const vendorRegister = asyncHandler(async (req: Request, res: Response) =
 
     return sendSuccess(
       res,
-      "Vendor registration successful. Awaiting admin approval.",
+      "Vendor registration successful. All KYC documents verified. Awaiting admin approval.",
       {
         token,
         vendor,
+        kycVerification,
       },
       201
     );

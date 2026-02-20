@@ -16,7 +16,7 @@ const generateSKU = (productName: string, colorName: string, size: string): stri
 ===================================================== */
 
 export const createProduct = async (data: any) => {
-  if (!data.name || !data.productType || !data.audience) {
+  if (!data.name || !data.productType || !data.gender || !data.department) {
     throw new Error("Missing required product fields");
   }
 
@@ -49,11 +49,14 @@ export const createProduct = async (data: any) => {
     data: {
       name: data.name.trim(),
       description: data.description ?? null,
-      audience: data.audience,
+      gender: data.gender,
+      department: data.department,
       productType: data.productType,
       minPrice,
       isActive: data.isActive ?? true,
       isAvailable,
+      shippingPolicy: data.shippingPolicy,
+      returnPolicy: data.returnPolicy,
 
       /* PRODUCT IMAGES */
       images: Array.isArray(data.images)
@@ -62,6 +65,7 @@ export const createProduct = async (data: any) => {
               imageUrl: img.imageUrl,
               sortOrder: index,
               isPrimary: index === 0,
+              position: img.position || "other",
             })),
           }
         : undefined,
@@ -112,7 +116,8 @@ export const getAllProducts = async () => {
     select: {
       id: true,
       name: true,
-      audience: true,
+      gender: true,
+      department: true,
       productType: true,
       minPrice: true,
       isActive: true,
@@ -125,6 +130,7 @@ export const getAllProducts = async () => {
           imageUrl: true,
           sortOrder: true,
           isPrimary: true,
+          // position: true, // TODO: Enable after running prisma generate
         },
       },
       colors: {
@@ -176,6 +182,11 @@ export const updateProduct = async (id: string, data: any) => {
       data: {
         name: data.name?.trim(),
         description: data.description ?? null,
+        gender: data.gender,
+        department: data.department,
+        productType: data.productType,
+        shippingPolicy: data.shippingPolicy,
+        returnPolicy: data.returnPolicy,
       },
     });
 

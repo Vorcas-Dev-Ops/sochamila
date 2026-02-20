@@ -8,6 +8,8 @@ type ImageWithView = { image: string; view?: string };
 
 interface RightPanelProps {
   product: {
+    id?: string;
+    name?: string;
     images?: string[] | ImageWithView[];
   };
   selectedColor: string;
@@ -16,6 +18,16 @@ interface RightPanelProps {
   layerCount?: number;
   selectedLayerId?: string | null;
   getPreviewImages?: () => Promise<Record<Side, string | null>>;
+  availableSizes?: string[];
+  availableColors?: Array<{ name: string; hex: string }>;
+  variants?: Array<{
+    id: string;
+    color: string;
+    size: string;
+    price: number;
+    stock: number;
+  }>;
+  onAddToCart?: (variantId: string, productName: string, selectedSize: string, selectedColor: string, price: number) => void;
 }
 
 /* ================= CONSTANTS ================= */
@@ -76,7 +88,22 @@ export default function RightPanel({
   layerCount = 0,
   selectedLayerId,
   getPreviewImages,
+  availableSizes = ["XS", "S", "M", "L", "XL", "XXL"],
+  availableColors = [],
+  variants = [],
+  onAddToCart,
 }: RightPanelProps) {
+  // State for selected size and color
+  const [selectedSize, setSelectedSize] = useState<string>(availableSizes[0] || "");
+  const [selectedVariantColor, setSelectedVariantColor] = useState<string>(selectedColor);
+  
+  // Find matching variant based on selected size and color
+  const selectedVariant = variants.find(
+    v => v.size === selectedSize && v.color.toLowerCase() === selectedVariantColor.toLowerCase()
+  );
+  
+  // Get product name for cart
+  const productName = product.name || "Custom Design";
   const sideLabels: Record<Side, string> = {
     front: " Front",
     back: " Back",
@@ -122,113 +149,125 @@ export default function RightPanel({
 
   return (
     <>
-      <aside className="w-80 bg-white border-l border-gray-200 p-5 flex flex-col justify-between h-screen overflow-y-auto">
+      <aside className="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 p-3 lg:p-5 flex flex-row lg:flex-col justify-between h-full overflow-x-auto lg:overflow-y-auto">
       {/* TOP */}
-      <div>
-        <h3 className="font-bold text-lg mb-1 text-gray-900">
-          Product Design
+      <div className="min-w-[200px] lg:min-w-0">
+        <h3 className="hidden lg:block font-bold text-lg mb-1 text-gray-900">
+          Product Details
         </h3>
-        <p className="text-xs text-gray-500 mb-4">
-          Select the side you want to design
+        <p className="hidden lg:block text-xs text-gray-500 mb-4">
+          Review your design details
         </p>
 
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {SIDES.map((side) => {
-            const img = resolvePreviewImage(
-              product.images,
-              selectedColor,
-              side
-            );
-
-            const isActive = activeSide === side;
-
-            return (
-              <button
-                key={side}
-                onClick={() => setActiveSide(side)}
-                className={`relative border-2 rounded-xl p-3 transition-all duration-200 transform hover:scale-105 ${
-                  isActive
-                    ? "ring-2 ring-teal-600 border-teal-600 shadow-lg bg-teal-50"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                <div className="h-24 bg-gray-100 rounded-lg mb-2 flex items-center justify-center overflow-hidden border border-gray-200">
-                  {img ? (
-                    <img
-                      src={img}
-                      alt={`${selectedColor} ${side}`}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = fallbackImg;
-                      }}
-                    />
-                  ) : (
-                    <span className="text-xs text-gray-400 text-center">
-                      No image
-                    </span>
-                  )}
-                </div>
-
-                <span className="block text-center font-semibold text-sm capitalize text-gray-900">
-                  {sideLabels[side as Side]}
-                </span>
-
-                {isActive && (
-                  <span className="absolute top-2 right-2 text-[10px] bg-teal-600 text-white px-2 py-1 rounded-full font-semibold shadow-md">
-                    ✓ Active
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="space-y-3 mb-4">
-          <div className="rounded-xl bg-blue-50 border-2 border-blue-200 p-5 text-xs text-blue-900 space-y-3">
-            <p className="font-bold text-base flex items-center gap-2">
-              <span>ℹ️</span> Design Info
-            </p>
-            <div className="space-y-2 ml-5">
-              <p>
-                 <span className="font-semibold">Side:</span>{" "}
-                <span className="text-blue-700 font-bold text-sm uppercase bg-blue-200 px-2 py-0.5 rounded">{activeSide}</span>
-              </p>
-              <p>
-                 <span className="font-semibold">Color:</span>{" "}
-                <span className="text-blue-700 font-bold text-sm capitalize bg-blue-200 px-2 py-0.5 rounded">{selectedColor}</span>
-              </p>
-              <p>
-                 <span className="font-semibold">Layers:</span>{" "}
-                <span className="text-blue-700 font-bold inline-block bg-blue-200 px-2 py-0.5 rounded">{layerCount}</span>
-              </p>
-              {selectedLayerId && (
-                <p className="text-blue-700 font-semibold bg-blue-200 px-2 py-1.5 rounded inline-block mt-2">✓ Layer selected</p>
-              )}
+        <div className="hidden lg:block space-y-5 mb-4">
+          {/* Size Selection */}
+          <div>
+            <p className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Size</p>
+            <div className="grid grid-cols-3 gap-2">
+              {availableSizes.map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setSelectedSize(size)}
+                  className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
+                    selectedSize === size
+                      ? "bg-gray-900 text-white shadow-md"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="rounded-xl bg-amber-50 border-2 border-amber-200 p-4 text-xs text-amber-900">
-            <p className="font-bold text-sm flex items-center gap-2 mb-3">
-              <span>💡</span> Quick Tips
-            </p>
-            <ul className="space-y-2 ml-5">
-              <li className="flex gap-2"><span>•</span> <span>Drag layers to move</span></li>
-              <li className="flex gap-2"><span>•</span> <span>Drag edges to resize</span></li>
-              <li className="flex gap-2"><span>•</span> <span>Press Delete to remove layer</span></li>
-              <li className="flex gap-2"><span>•</span> <span>Use Left panel to customize</span></li>
-            </ul>
+          {/* Color Selection */}
+          <div>
+            <p className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Color</p>
+            {availableColors.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {availableColors.map((color) => (
+                  <button
+                    key={color.name}
+                    title={color.name}
+                    onClick={() => setSelectedVariantColor(color.name)}
+                    className={`w-9 h-9 rounded-full transition-all ${
+                      selectedVariantColor.toLowerCase() === color.name.toLowerCase()
+                        ? "ring-2 ring-offset-2 ring-gray-900 scale-110"
+                        : "hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: color.hex }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500">No colors available</p>
+            )}
+          </div>
+
+          {/* Price & Stock Info */}
+          {selectedVariant && (
+            <div className="pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Price</p>
+                  <p className="text-2xl font-bold text-gray-900">₹{selectedVariant.price}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Stock</p>
+                  <p className={`text-sm font-medium ${selectedVariant.stock > 0 ? "text-green-600" : "text-red-500"}`}>
+                    {selectedVariant.stock > 0 ? `${selectedVariant.stock} available` : "Out of stock"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Design Info */}
+          <div className="pt-4 border-t border-gray-100">
+            <p className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Design Info</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Side</span>
+                <span className="font-medium text-gray-900 capitalize">{activeSide}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Color</span>
+                <span className="font-medium text-gray-900 capitalize">{selectedColor}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Layers</span>
+                <span className="font-medium text-gray-900">{layerCount}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* BOTTOM */}
-      <div className="space-y-3 border-t border-gray-200 pt-4">
-        <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold transition-all duration-200 transform active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base" title="Export your design as an image">
-          <span></span> Export Design
-        </button>
-
-        <button className="w-full bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-xl font-bold transition-all duration-200 transform active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base" title="Add this design to your cart">
-          <span></span> Add to Cart
+      <div className="hidden lg:block space-y-3 border-t border-gray-200 pt-4">
+        <button 
+          onClick={() => {
+            if (selectedVariant && onAddToCart) {
+              onAddToCart(selectedVariant.id, productName, selectedSize, selectedVariantColor, selectedVariant.price);
+            } else if (!selectedVariant) {
+              alert("Please select a valid size and color combination");
+            }
+          }}
+          disabled={!selectedVariant || selectedVariant.stock <= 0}
+          className={`w-full py-3 rounded-xl font-bold transition-all duration-200 transform active:scale-95 shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-base ${
+            selectedVariant && selectedVariant.stock > 0
+              ? "bg-pink-600 hover:bg-pink-700 text-white"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
+          title={selectedVariant ? "Add this design to your cart" : "Select size and color first"}
+        >
+          <span>🛒</span> 
+          {selectedVariant 
+            ? selectedVariant.stock > 0 
+              ? `Add to Cart - ₹${selectedVariant.price}` 
+              : "Out of Stock"
+            : "Select Size & Color"
+          }
         </button>
 
         <button

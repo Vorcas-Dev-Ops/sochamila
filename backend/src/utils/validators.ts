@@ -47,7 +47,8 @@ export const createProductSchema = z.object({
     .min(3, "Product name must be at least 3 characters")
     .max(255, "Product name must be less than 255 characters"),
   description: z.string().optional(),
-  audience: z.enum(["MEN", "WOMEN", "KIDS", "UNISEX"]),
+  gender: z.enum(["MEN", "WOMEN", "KIDS", "UNISEX"]),
+  department: z.enum(["CLOTHING", "ACCESSORIES", "FOOTWEAR", "HOME_LIVING", "GEAR"]),
   productType: z.string().min(1, "Product type is required"),
   isActive: z.boolean().default(true),
   isAvailable: z.boolean().default(true),

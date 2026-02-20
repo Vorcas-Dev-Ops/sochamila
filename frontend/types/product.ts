@@ -34,7 +34,8 @@ export interface Product {
   name: string;
   description?: string | null;
 
-  audience: "MEN" | "WOMEN" | "KIDS" | "ACCESSORIES";
+  gender: "MEN" | "WOMEN" | "KIDS" | "UNISEX";
+  department: "CLOTHING" | "ACCESSORIES" | "FOOTWEAR" | "HOME_LIVING" | "GEAR";
   productType:
     | "TSHIRT"
     | "SHIRT"
@@ -59,6 +60,9 @@ export interface Product {
 
   isActive: boolean;
   isAvailable: boolean;
+
+  shippingPolicy?: string;
+  returnPolicy?: string;
 
   variants: ProductVariant[];
 }

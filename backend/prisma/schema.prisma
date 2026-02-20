@@ -26,16 +26,18 @@ enum VendorKycStatus {
   REJECTED
 }
 
-enum AudienceCategory {
+enum Gender {
   MEN
   WOMEN
   KIDS
+  UNISEX
 }
 
-enum ProductCategory {
-  REGULAR
-  GEAR
+enum ProductDepartment {
+  CLOTHING
   ACCESSORIES
+   HOME_LIVING
+  GEAR
 }
 
 enum ProductType {
@@ -187,14 +189,18 @@ model Product {
   name        String
   description String?
 
-  audience        AudienceCategory
-  productCategory ProductCategory @default(REGULAR)
-  productType ProductType
+  gender          Gender          @default(UNISEX)
+  department      ProductDepartment @default(CLOTHING)
+  productType     ProductType
 
   minPrice Int
 
   isActive    Boolean @default(true)
   isAvailable Boolean @default(true)
+
+  // Shipping & Return Policy (editable per product)
+  shippingPolicy String @default("Free shipping on orders above ₹500\nStandard delivery: 5-7 business days\nExpress delivery: 2-3 business days (extra charges apply)")
+  returnPolicy   String @default("30-day return window from delivery date\nProduct must be unused and in original packaging\nFree return shipping for defective items")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -215,6 +221,7 @@ model ProductImage {
   imageUrl  String
   sortOrder Int     @default(0)
   isPrimary Boolean @default(false)
+  position  String  @default("other") // front, back, side, detail, other
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 

@@ -86,6 +86,8 @@ export function useAuth() {
     sessionStorage.removeItem("token");
     // Remove cookie as well
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    // Clear cart on logout
+    localStorage.removeItem("cart");
     setUser(null);
   };
 

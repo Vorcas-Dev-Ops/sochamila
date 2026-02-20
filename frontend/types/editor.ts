@@ -132,7 +132,7 @@ export interface StickerLayer extends BaseLayer {
    PATTERN LAYER
 ========================================================= */
 
-export type PatternType = "stripes" | "dots" | "grid" | "diagonal" | "checkerboard" | "waves" | "hexagon" | "triangle";
+export type PatternType = "stripes" | "dots" | "grid" | "diagonal" | "checkerboard" | "waves" | "hexagon" | "triangle" | "crosshatch" | "zigzag" | "chevron" | "polka" | "stars" | "diamond" | "vertical" | "horizontal";
 
 export interface PatternLayer extends BaseLayer {
   readonly type: "pattern";

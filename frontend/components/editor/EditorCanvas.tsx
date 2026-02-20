@@ -51,6 +51,16 @@ interface EditorCanvasProps {
 
   /** When true, hide selection UI and labels so captured preview shows only the design */
   captureMode?: boolean;
+  
+  /** Side selection props */
+  availableSides?: Side[];
+  onSideChange?: (side: Side) => void;
+  
+  /** When true, hide side selector (for fullscreen mode) */
+  hideSideSelector?: boolean;
+  
+  /** When true, enable zoom functionality (for fullscreen mode) */
+  enableZoom?: boolean;
 }
 
 /* ======================================================
@@ -115,7 +125,19 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
     updateLayer,
     deleteLayer,
     captureMode = false,
+    availableSides = ["front", "back", "left", "right"],
+    onSideChange,
+    hideSideSelector = false,
+    enableZoom = false,
   }, ref) {
+  const [zoom, setZoom] = useState(1);
+  
+  // Reset zoom when exiting fullscreen (enableZoom changes from true to false)
+  useEffect(() => {
+    if (!enableZoom) {
+      setZoom(1);
+    }
+  }, [enableZoom]);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] =
     useState(CANVAS_SIZE);
@@ -208,13 +230,53 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
      UI
   ====================================================== */
 
+  const sideLabels: Record<Side, string> = {
+    front: "Front",
+    back: "Back",
+    left: "Left",
+    right: "Right",
+  };
+
   return (
-    <div className="flex-1 flex items-center justify-center bg-gray-100 px-8 sticky top-0">
-      <div
-        ref={containerRef}
-        className="relative w-[420px] h-[520px] bg-white rounded-2xl shadow-xl"
-        onMouseDown={() => setSelectedLayerId(null)}
-      >
+    <div className="flex-1 flex flex-col items-center justify-center bg-gray-100 p-4 lg:px-8 overflow-hidden">
+      {/* Zoom Controls - Only visible when zoom is enabled */}
+      {enableZoom && (
+        <div className="absolute top-4 left-4 z-50 flex items-center gap-2 bg-white rounded-lg shadow-lg p-2">
+          <button
+            onClick={() => setZoom(z => Math.max(0.5, z - 0.25))}
+            className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded text-lg font-bold"
+          >
+            −
+          </button>
+          <span className="text-sm font-medium w-12 text-center">{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={() => setZoom(z => Math.min(3, z + 0.25))}
+            className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded text-lg font-bold"
+          >
+            +
+          </button>
+          <button
+            onClick={() => setZoom(1)}
+            className="ml-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+      
+      {/* Scrollable Container for Zoomed Canvas */}
+      <div className={`flex-1 flex items-center justify-center ${enableZoom ? 'overflow-auto w-full h-full' : 'overflow-hidden'}`}>
+        {/* Canvas Container */}
+        <div
+          ref={containerRef}
+          className="relative w-[280px] h-[350px] sm:w-[350px] sm:h-[440px] lg:w-[420px] lg:h-[520px] bg-white rounded-2xl shadow-xl transition-transform flex-shrink-0"
+          style={{ 
+            transform: `scale(${zoom})`,
+            transformOrigin: 'center center',
+            margin: zoom > 1 ? 'auto' : undefined
+          }}
+          onMouseDown={() => setSelectedLayerId(null)}
+        >
         {/* PRODUCT IMAGE */}
         {productImage ? (
           <img
@@ -338,17 +400,32 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
             {selectedColor.toUpperCase()} · {side.toUpperCase()}
           </span>
         )}
-        {!captureMode && !selectedLayerId && (
-          <span className="absolute bottom-4 left-4 bg-gray-800 text-white text-[11px] px-3 py-1.5 rounded-lg max-w-xs">
-            Click to select layer • Delete key to remove • Use left panel to edit
-          </span>
-        )}
-        {!captureMode && selectedLayerId && (
-          <span className="absolute bottom-4 left-4 bg-indigo-600 text-white text-[11px] px-3 py-1.5 rounded-lg">
-            Drag to move • Drag edges to resize • Use left panel to rotate
-          </span>
-        )}
+        </div>
       </div>
+
+      {/* Side Selector - Below Canvas */}
+      {!captureMode && onSideChange && !hideSideSelector && (
+        <div className="mt-4 flex items-center gap-2">
+          {availableSides.map((s) => (
+            <button
+              key={s}
+              onClick={() => onSideChange(s)}
+              className={`w-14 h-14 sm:w-16 sm:h-16 border-2 rounded-lg transition-all ${
+                side === s
+                  ? "border-teal-600 bg-teal-50 shadow-md"
+                  : "border-gray-300 bg-white hover:border-gray-400"
+              }`}
+              title={sideLabels[s]}
+            >
+              <span className={`text-xs font-medium capitalize ${
+                side === s ? "text-teal-700" : "text-gray-600"
+              }`}>
+                {sideLabels[s]}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
   }
@@ -690,6 +767,100 @@ function PatternRenderer({ layer }: { layer: PatternLayer }) {
             }
           }
         }
+      } else if (layer.patternType === "crosshatch") {
+        ctx.strokeStyle = color1;
+        ctx.lineWidth = 1;
+        if (color1 !== "transparent") {
+          // Diagonal lines one way
+          for (let i = -canvas.height; i < canvas.width; i += size) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i + canvas.height, canvas.height);
+            ctx.stroke();
+          }
+          // Diagonal lines other way
+          for (let i = 0; i < canvas.width + canvas.height; i += size) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i - canvas.height, canvas.height);
+            ctx.stroke();
+          }
+        }
+      } else if (layer.patternType === "zigzag") {
+        ctx.strokeStyle = color1;
+        ctx.lineWidth = 2;
+        if (color1 !== "transparent") {
+          for (let y = 0; y < canvas.height; y += size) {
+            ctx.beginPath();
+            for (let x = 0; x <= canvas.width; x += size / 2) {
+              const zy = y + (x / (size / 2) % 2 === 0 ? 0 : size / 2);
+              if (x === 0) ctx.moveTo(x, zy);
+              else ctx.lineTo(x, zy);
+            }
+            ctx.stroke();
+          }
+        }
+      } else if (layer.patternType === "chevron") {
+        ctx.strokeStyle = color1;
+        ctx.lineWidth = 2;
+        if (color1 !== "transparent") {
+          for (let y = 0; y < canvas.height; y += size) {
+            for (let x = 0; x < canvas.width; x += size) {
+              ctx.beginPath();
+              ctx.moveTo(x, y + size / 2);
+              ctx.lineTo(x + size / 2, y);
+              ctx.lineTo(x + size, y + size / 2);
+              ctx.stroke();
+            }
+          }
+        }
+      } else if (layer.patternType === "polka") {
+        const dotSize = size / 2;
+        if (color1 !== "transparent") {
+          for (let x = size / 2; x < canvas.width; x += size * 1.5) {
+            for (let y = size / 2; y < canvas.height; y += size * 1.5) {
+              ctx.beginPath();
+              ctx.arc(x, y, dotSize, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      } else if (layer.patternType === "stars") {
+        if (color1 !== "transparent") {
+          for (let x = size; x < canvas.width; x += size * 2) {
+            for (let y = size; y < canvas.height; y += size * 2) {
+              drawStar(ctx, x, y, 5, size / 2, size / 4);
+            }
+          }
+        }
+      } else if (layer.patternType === "diamond") {
+        if (color1 !== "transparent") {
+          for (let x = 0; x < canvas.width; x += size) {
+            for (let y = 0; y < canvas.height; y += size) {
+              ctx.beginPath();
+              ctx.moveTo(x + size / 2, y);
+              ctx.lineTo(x + size, y + size / 2);
+              ctx.lineTo(x + size / 2, y + size);
+              ctx.lineTo(x, y + size / 2);
+              ctx.closePath();
+              ctx.fill();
+            }
+          }
+        }
+      } else if (layer.patternType === "vertical") {
+        ctx.fillStyle = color1;
+        if (color1 !== "transparent") {
+          for (let i = 0; i < canvas.width; i += size * 2) {
+            ctx.fillRect(i, 0, size / 2, canvas.height);
+          }
+        }
+      } else if (layer.patternType === "horizontal") {
+        ctx.fillStyle = color1;
+        if (color1 !== "transparent") {
+          for (let i = 0; i < canvas.height; i += size * 2) {
+            ctx.fillRect(0, i, canvas.width, size / 2);
+          }
+        }
       }
 
       // Convert canvas to data URL
@@ -737,4 +908,28 @@ function drawHexagon(
   }
   ctx.closePath();
   ctx.stroke();
+}
+
+/**
+ * Helper to draw star on canvas
+ */
+function drawStar(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  points: number,
+  outerRadius: number,
+  innerRadius: number
+) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+    const angle = (i * Math.PI) / points - Math.PI / 2;
+    const sx = x + radius * Math.cos(angle);
+    const sy = y + radius * Math.sin(angle);
+    if (i === 0) ctx.moveTo(sx, sy);
+    else ctx.lineTo(sx, sy);
+  }
+  ctx.closePath();
+  ctx.fill();
 }

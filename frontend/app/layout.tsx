@@ -10,6 +10,7 @@ import {
 import "./globals.css";
 
 import { LayoutWrapper } from "../components/layout/LayoutWrapper";
+import { CartProvider } from "../lib/cart";
 
 /* UI Fonts */
 const geistSans = Geist({
@@ -70,9 +71,11 @@ export default function RootLayout({
           bg-gray-50 antialiased
         `}
       >
-        <LayoutWrapper>
-          {children}
-        </LayoutWrapper>
+        <CartProvider>
+          <LayoutWrapper>
+            {children}
+          </LayoutWrapper>
+        </CartProvider>
       </body>
     </html>
   );

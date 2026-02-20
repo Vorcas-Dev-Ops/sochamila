@@ -441,7 +441,7 @@ export default function ProductClient({
 
           {/* DESCRIPTION */}
           <div className="bg-gray-50 rounded-xl p-4">
-            <h3 className="font-semibold text-gray-900 mb-1">📋 Product Description</h3>
+            <h3 className="font-semibold text-gray-900 mb-1">Product Description</h3>
             <div className="text-sm text-gray-700 leading-relaxed">
               {product.description ? (
                 <div className={showFullDescription ? '' : 'line-clamp-3'}>
@@ -546,7 +546,7 @@ export default function ProductClient({
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
             >
-              {selectedVariant ? "🎨 Create Now" : "Select Size"}
+              {selectedVariant ? " Create Now" : "Select Size"}
             </button>
 
             {/* CART/CHECKOUT BUTTONS - Only show if size selected */}
@@ -562,7 +562,7 @@ export default function ProductClient({
                     {addingToCart ? (
                       <span>⏳ Adding...</span>
                     ) : (
-                      <span>🛒 Add to Cart</span>
+                      <span> Add to Cart</span>
                     )}
                   </button>
                 ) : (
@@ -572,13 +572,13 @@ export default function ProductClient({
                       onClick={() => router.push("/login")}
                       className="py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg bg-linear-to-r from-gray-600 to-gray-500 text-white hover:from-gray-700 hover:to-gray-600 hover:shadow-xl"
                     >
-                      <span>🔑 Login</span>
+                      <span> Login</span>
                     </button>
                     <button
                       onClick={handleAddToCart}
                       className="py-4 rounded-xl text-lg font-bold transition-all duration-200 transform active:scale-95 shadow-lg bg-linear-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 hover:shadow-xl"
                     >
-                      <span>🛒 Add to Cart</span>
+                      <span> Add to Cart</span>
                     </button>
                   </>
                 )}
@@ -599,7 +599,7 @@ export default function ProductClient({
           <div className="space-y-6">
             {/* SHIPPING POLICY */}
             <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">🚚 Shipping Policy</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">📦 Shipping Policy</h3>
               <div className="text-sm text-gray-700 space-y-1 whitespace-pre-line">
                 {product.shippingPolicy || "Free shipping on orders above ₹500\nStandard delivery: 5-7 business days\nExpress delivery: 2-3 business days (extra charges apply)"}
               </div>
@@ -607,7 +607,7 @@ export default function ProductClient({
             
             {/* RETURN POLICY */}
             <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">↩️ Return & Exchange Policy</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">↩ Return & Exchange Policy</h3>
               <div className="text-sm text-gray-700 space-y-1 whitespace-pre-line">
                 {product.returnPolicy || "30-day return window from delivery date\nProduct must be unused and in original packaging\nFree return shipping for defective items"}
               </div>
@@ -616,7 +616,7 @@ export default function ProductClient({
             {/* RELATED PRODUCTS */}
             <div className="pt-4">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <span>🔥</span>
+               
                 <span>You might also like</span>
               </h3>
               

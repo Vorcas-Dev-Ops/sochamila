@@ -76,6 +76,9 @@ export default function EditorLayout({
   const [activeToolTab, setActiveToolTab] = useState<ToolTab>("text");
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mobilePanelTab, setMobilePanelTab] = useState<
+    "text" | "image" | "graphics" | "stickers" | "ai"
+  >("text");
 
   const selectedColor = variant.color ?? "default";
   const { addToCart } = useCart();
@@ -486,34 +489,55 @@ export default function EditorLayout({
             className="lg:hidden fixed inset-0 bg-black/50 z-40"
             onClick={() => setIsToolsPanelOpen(false)}
           />
+
           {/* Mobile Tools Panel */}
-          <div className="lg:hidden fixed inset-y-0 left-0 w-[280px] bg-white z-50 shadow-xl">
+          <div className="lg:hidden fixed inset-y-0 left-0 w-[320px] max-w-full bg-white z-50 shadow-xl flex flex-col">
             <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="font-semibold">Tools</h2>
-              <button onClick={() => setIsToolsPanelOpen(false)}>
+              <h2 className="font-semibold text-base">Tools</h2>
+              <button 
+                onClick={() => setIsToolsPanelOpen(false)}
+                className="p-2 rounded-lg hover:bg-gray-100"
+                aria-label="Close tools"
+              >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
+
             {/* Mobile Icon Menu */}
-            <div className="p-4 grid grid-cols-3 gap-2">
+            <div className="p-3 grid grid-cols-4 gap-2 border-b">
               {["text", "image", "graphics", "ai"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
-                    setActiveToolTab(tab as ToolTab);
-                    if (tab !== "products") {
-                      setIsToolsPanelOpen(true);
-                    }
+                    setMobilePanelTab(tab as any);
                   }}
-                  className={`p-3 rounded-lg text-sm capitalize ${
-                    activeToolTab === tab ? "bg-indigo-100 text-indigo-600" : "bg-gray-50"
+                  className={`py-2 px-1 rounded-lg text-xs font-medium capitalize text-center ${
+                    mobilePanelTab === tab ? "bg-indigo-100 text-indigo-700" : "bg-gray-50 text-gray-700"
                   }`}
                 >
                   {tab}
                 </button>
               ))}
+            </div>
+
+            {/* Mobile Tools Content */}
+            <div className="flex-1 min-h-0">
+              <LeftPanel
+                selectedLayer={selectedLayer}
+                onAddText={onAddText}
+                onUpdateText={onUpdateText}
+                onAddImage={onAddImage}
+                onUpdateImage={onUpdateImage}
+                onAddPattern={onAddPattern}
+                onUpdatePattern={onUpdatePattern}
+                lastPatternId={lastPatternId}
+                onUpdatePatternById={onUpdatePatternById}
+                onGenerateAIImage={onGenerateAIImage}
+                initialTab={mobilePanelTab}
+                onClose={() => setIsToolsPanelOpen(false)}
+              />
             </div>
           </div>
         </>

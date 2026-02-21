@@ -51,6 +51,8 @@ const createProduct = async (data) => {
             minPrice,
             isActive: data.isActive ?? true,
             isAvailable,
+            shippingPolicy: data.shippingPolicy,
+            returnPolicy: data.returnPolicy,
             /* PRODUCT IMAGES */
             images: Array.isArray(data.images)
                 ? {
@@ -116,7 +118,7 @@ const getAllProducts = async () => {
                     imageUrl: true,
                     sortOrder: true,
                     isPrimary: true,
-                    position: true,
+                    // position: true, // TODO: Enable after running prisma generate
                 },
             },
             colors: {
@@ -166,6 +168,11 @@ const updateProduct = async (id, data) => {
             data: {
                 name: data.name?.trim(),
                 description: data.description ?? null,
+                gender: data.gender,
+                department: data.department,
+                productType: data.productType,
+                shippingPolicy: data.shippingPolicy,
+                returnPolicy: data.returnPolicy,
             },
         });
         /* ---------- PRODUCT IMAGES ---------- */

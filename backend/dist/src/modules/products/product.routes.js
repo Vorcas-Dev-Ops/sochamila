@@ -15,4 +15,7 @@ productRouter.get("/size/:id", product_controller_1.getSizeById);
 // GET /api/products/:id
 // Returns a single product by ID
 productRouter.get("/:id", product_controller_1.getProductById);
+// GET /api/products/related/:id
+// Returns related products for a specific product
+productRouter.get("/related/:id", product_controller_1.getRelatedProducts);
 exports.default = productRouter;

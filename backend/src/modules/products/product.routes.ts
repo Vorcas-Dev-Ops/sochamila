@@ -3,6 +3,7 @@ import {
   getProducts,
   getProductById,
   getSizeById,
+  getRelatedProducts,
 } from "./product.controller";
 
 const productRouter = Router();
@@ -22,5 +23,9 @@ productRouter.get("/size/:id", getSizeById);
 // GET /api/products/:id
 // Returns a single product by ID
 productRouter.get("/:id", getProductById);
+
+// GET /api/products/related/:id
+// Returns related products for a specific product
+productRouter.get("/related/:id", getRelatedProducts);
 
 export default productRouter;

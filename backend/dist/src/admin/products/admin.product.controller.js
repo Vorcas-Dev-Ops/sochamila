@@ -41,7 +41,7 @@ const client_1 = require("@prisma/client");
 ====================================================== */
 const createProduct = async (req, res) => {
     try {
-        const { name, description, gender, department, productType, isActive, colors, productImageCount, imagePositions, } = req.body;
+        const { name, description, gender, department, productType, isActive, colors, productImageCount, imagePositions, shippingPolicy, returnPolicy, } = req.body;
         /* ---------- VALIDATION ---------- */
         if (!name || !gender || !department || !productType || !colors) {
             return res.status(400).json({
@@ -125,6 +125,8 @@ const createProduct = async (req, res) => {
             department,
             productType,
             isActive: isActive !== "false",
+            shippingPolicy: shippingPolicy?.trim() || undefined,
+            returnPolicy: returnPolicy?.trim() || undefined,
             images: productImages,
             colors: colorsWithImages,
         });

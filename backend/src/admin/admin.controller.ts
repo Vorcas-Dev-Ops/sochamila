@@ -31,7 +31,7 @@ export const getOrderDesigns = async (req: Request, res: Response) => {
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: typeof orderId === 'string' ? orderId : '' },
       include: {
         user: { select: { id: true, name: true, email: true } },
         items: {

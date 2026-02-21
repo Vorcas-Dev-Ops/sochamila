@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { X, Filter, ChevronDown, ShoppingBag, Heart, SlidersHorizontal } from "lucide-react";
 import type { Product } from "@/types/product";
+import api from "@/lib/axios";
+import { useAuth } from "@/lib/useAuth";
 
 /* ================= CONFIG ================= */
 
@@ -134,8 +136,13 @@ const COLOR_MAP: Record<string, string> = Object.fromEntries(
 /* ================= PAGE ================= */
 
 export default function ProductsList() {
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  /* WISHLIST STATE */
+  const [wishlist, setWishlist] = useState<Set<string>>(new Set());
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   /* FILTER STATE */
   const [gender, setGender] = useState<string | null>(null);
@@ -186,14 +193,23 @@ export default function ProductsList() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const res = await fetch(`${API_URL}/api/products`, {
-          cache: "no-store",
-        });
-        const json = await res.json();
-
+        console.log("[ProductsList] Fetching products...");
+        const response = await api.get("/products");
+        
         // backend returns { success, data }
-        setProducts(Array.isArray(json?.data) ? json.data : []);
-      } catch {
+        console.log("[ProductsList] Response:", response.data);
+        const data = response.data?.data;
+        
+        if (Array.isArray(data)) {
+          console.log(`[ProductsList] Loaded ${data.length} products`);
+          setProducts(data);
+        } else {
+          console.warn("[ProductsList] Invalid data format:", data);
+          setProducts([]);
+        }
+      } catch (error: any) {
+        console.error("[ProductsList] Failed to fetch products:", error);
+        console.error("[ProductsList] Error response:", error?.response?.data);
         setProducts([]);
       } finally {
         setLoading(false);
@@ -202,6 +218,26 @@ export default function ProductsList() {
 
     fetchProducts();
   }, []);
+  
+  /* ================= FETCH WISHLIST ================= */
+  const fetchWishlist = useCallback(async () => {
+    if (!user) {
+      setWishlist(new Set());
+      return;
+    }
+    try {
+      const response = await api.get("/wishlist");
+      const data = response.data?.data || [];
+      setWishlist(new Set(data.map((item: { id: string }) => item.id)));
+    } catch (error) {
+      console.error("[ProductsList] Failed to fetch wishlist:", error);
+      setWishlist(new Set());
+    }
+  }, [user]);
+  
+  useEffect(() => {
+    fetchWishlist();
+  }, [fetchWishlist]);
 
   /* ================= FILTER + SORT ================= */
 
@@ -535,7 +571,36 @@ export default function ProductsList() {
             </div>
           ) : (
             filteredProducts.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard 
+                key={p.id} 
+                product={p} 
+                isInWishlist={wishlist.has(p.id)}
+                onToggleWishlist={async (product) => {
+                  if (!user) {
+                    window.location.href = "/login";
+                    return;
+                  }
+                  setWishlistLoading(true);
+                  try {
+                    if (wishlist.has(product.id)) {
+                      await api.delete(`/wishlist/${product.id}`);
+                      setWishlist(prev => {
+                        const next = new Set(prev);
+                        next.delete(product.id);
+                        return next;
+                      });
+                    } else {
+                      await api.post("/wishlist", { id: product.id, title: product.name });
+                      setWishlist(prev => new Set(prev).add(product.id));
+                    }
+                  } catch (error) {
+                    console.error("[ProductsList] Wishlist toggle failed:", error);
+                  } finally {
+                    setWishlistLoading(false);
+                  }
+                }}
+                isWishlistLoading={wishlistLoading}
+              />
             ))
           )}
         </div>
@@ -793,7 +858,17 @@ const getImageUrl = (imagePath: string | null | undefined): string | null => {
   return `${API_URL}/uploads/${p}`;
 };
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({ 
+  product, 
+  isInWishlist, 
+  onToggleWishlist,
+  isWishlistLoading 
+}: { 
+  product: Product; 
+  isInWishlist: boolean;
+  onToggleWishlist: (product: Product) => void;
+  isWishlistLoading: boolean;
+}) {
   const images: string[] = [];
 
   // Try thumbnail first
@@ -878,13 +953,24 @@ function ProductCard({ product }: { product: Product }) {
 
         {/* Wishlist Button */}
         <button 
-          className="absolute top-2 right-2 p-1.5 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 shadow-md z-10"
+          className={`absolute top-2 right-2 p-1.5 bg-white rounded-full transition-all duration-200 hover:scale-110 shadow-md z-10 ${
+            isInWishlist ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          } ${isWishlistLoading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+          disabled={isWishlistLoading}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            onToggleWishlist(product);
           }}
         >
-          <Heart size={14} className="text-gray-500 hover:text-red-500 transition-colors" />
+          <Heart 
+            size={14} 
+            className={`transition-colors ${
+              isInWishlist 
+                ? 'fill-red-500 text-red-500' 
+                : 'text-gray-500 hover:text-red-500'
+            }`} 
+          />
         </button>
 
         {/* Image Indicators */}
@@ -912,7 +998,12 @@ function ProductCard({ product }: { product: Product }) {
             ₹{product.minPrice}
           </p>
         </div>
-        <div className="flex items-center justify-between">
+        {product.description && (
+          <p className="text-[9px] text-gray-500 line-clamp-1 mt-0.5">
+            {product.description}
+          </p>
+        )}
+        <div className="flex items-center justify-between mt-1">
           <span className="text-[9px] text-gray-400">
             {product.department}
           </span>

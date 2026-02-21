@@ -17,7 +17,7 @@ export async function updateUser(req: Request, res: Response) {
     }
 
     const user = await prisma.user.update({
-      where: { id },
+      where: { id: typeof id === 'string' ? id : '' },
       data,
       select: {
         id: true,
@@ -45,7 +45,7 @@ export async function getUser(req: Request, res: Response) {
     if (!id) return res.status(400).json({ error: "Missing user id" });
 
     const user = await prisma.user.findUnique({
-      where: { id },
+      where: { id: typeof id === 'string' ? id : '' },
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
 

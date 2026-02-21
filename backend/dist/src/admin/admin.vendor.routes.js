@@ -26,7 +26,7 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const vendor = await prisma_1.default.user.findUnique({
-            where: { id },
+            where: { id: typeof id === 'string' ? id : '' },
             select: {
                 id: true,
                 name: true,
@@ -59,7 +59,7 @@ router.patch('/:id/kyc', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid kycStatus' });
         }
         const updated = await prisma_1.default.user.update({
-            where: { id },
+            where: { id: typeof id === 'string' ? id : '' },
             data: {
                 kycStatus: kycStatus,
                 isActive: kycStatus === 'APPROVED' ? true : undefined,
@@ -79,7 +79,7 @@ router.get('/:id/stats', async (req, res) => {
         const { id } = req.params;
         // Get assigned order items for this vendor
         const assignedItems = await prisma_1.default.orderItem.findMany({
-            where: { vendorId: id },
+            where: { vendorId: typeof id === 'string' ? id : '' },
             include: {
                 order: { select: { totalAmount: true, status: true } },
             },

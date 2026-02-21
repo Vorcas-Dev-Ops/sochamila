@@ -21,7 +21,7 @@ async function updateUser(req, res) {
             return res.status(400).json({ error: "No fields to update" });
         }
         const user = await prisma_1.default.user.update({
-            where: { id },
+            where: { id: typeof id === 'string' ? id : '' },
             data,
             select: {
                 id: true,
@@ -48,7 +48,7 @@ async function getUser(req, res) {
         if (!id)
             return res.status(400).json({ error: "Missing user id" });
         const user = await prisma_1.default.user.findUnique({
-            where: { id },
+            where: { id: typeof id === 'string' ? id : '' },
             select: { id: true, name: true, email: true, role: true, createdAt: true },
         });
         if (!user)

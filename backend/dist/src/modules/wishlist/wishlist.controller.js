@@ -39,7 +39,7 @@ async function removeWishlistItemController(req, res) {
         if (!userId)
             return res.status(401).json({ success: false, message: "Unauthorized" });
         const itemId = req.params.id;
-        const updated = await (0, wishlist_service_1.removeUserWishlistService)(userId, itemId);
+        const updated = await (0, wishlist_service_1.removeUserWishlistService)(userId, typeof itemId === 'string' ? itemId : '');
         return res.json({ success: true, data: updated });
     }
     catch (err) {

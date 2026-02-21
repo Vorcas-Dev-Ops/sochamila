@@ -38,8 +38,8 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: "Create", href: "/configurator" },
-    { name: "Shop", href: "/products" },
+    { name: "Shop", href: "/products", requiresAuth: false },
+    { name: "Create", href: "/configurator", requiresAuth: true },
   ];
 
   return (
@@ -72,7 +72,7 @@ export default function Navbar() {
           {navLinks.map((item) => (
             <Link
               key={item.name}
-              href={item.href}
+              href={item.requiresAuth && !isLoggedIn ? "/login" : item.href}
               className="relative font-semibold text-gray-700 transition hover:text-indigo-600
               after:absolute after:left-1/2 after:-bottom-1 after:h-[3px]
               after:w-0 after:bg-linear-to-r after:from-indigo-500 after:to-purple-500
@@ -209,7 +209,7 @@ export default function Navbar() {
             {navLinks.map((item) => (
               <Link
                 key={item.name}
-                href={item.href}
+                href={item.requiresAuth && !isLoggedIn ? "/login" : item.href}
                 className="block py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700 transition"
                 onClick={() => setMobileOpen(false)}
               >

@@ -1,10 +1,10 @@
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import { imagekit } from "../../lib/imagekit";
 
 /* ======================================================
-   GEMINI NANO BANANA (Image Generation)
-   Model: gemini-2.5-flash-image — fast, 1024px
-   See: https://ai.google.dev/gemini-api/docs/image-generation
+   OpenAI DALL-E (Image Generation)
+   Model: dall-e-3 — 1024x1024, standard quality
+   See: https://platform.openai.com/docs/guides/images
 ====================================================== */
 
 /* ================= TYPES ================= */
@@ -24,7 +24,7 @@ interface GenerationResult {
 /* ================= GENERATE IMAGE ================= */
 
 /**
- * Generate an image using Google Gemini Nano Banana (gemini-2.5-flash-image)
+ * Generate an image using OpenAI DALL-E 3
  * and upload to ImageKit for permanent storage
  */
 export async function generateImage(
@@ -32,72 +32,123 @@ export async function generateImage(
 ): Promise<GenerationResult> {
   const { prompt } = options;
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "GEMINI_API_KEY is not configured. Get a key at https://aistudio.google.com/apikey and add it to your .env file."
+      "OPENAI_API_KEY is not configured. Get a key at https://platform.openai.com/api-keys and add it to your .env file."
     );
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  const openai = new OpenAI({ apiKey });
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: prompt.trim(),
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+      response_format: "b64_json",
     });
 
-    const candidate = response.candidates?.[0];
-    if (!candidate?.content?.parts?.length) {
-      throw new Error("No image in Gemini response. Try a different prompt.");
-    }
-
-    let base64Image: string | null = null;
-    for (const part of candidate.content.parts) {
-      if (part.inlineData?.data) {
-        base64Image = part.inlineData.data;
-        break;
-      }
-    }
-
-    if (!base64Image) {
-      throw new Error("No image data in Gemini response. Try a different prompt.");
+    const imageData = response.data?.[0]?.b64_json;
+    if (!imageData) {
+      throw new Error("No image data in OpenAI response. Try a different prompt.");
     }
 
     const uploadResponse = await imagekit.upload({
-      file: base64Image,
-      fileName: `ai-gemini-${Date.now()}.png`,
+      file: imageData,
+      fileName: `ai-dalle-${Date.now()}.png`,
       folder: "/ai-generated",
-      tags: ["ai-generated", "gemini-nano-banana"],
+      tags: ["ai-generated", "dall-e-3"],
     });
 
     return {
       success: true,
       url: uploadResponse.url,
       prompt,
-      model: "gemini-2.5-flash-image",
+      model: "dall-e-3",
     };
   } catch (err: any) {
-    // Re-throw with clearer error message for quota issues
-    if (err?.status === 429 || err?.error?.code === 429) {
-      const quotaError = new Error(
-        `Gemini API quota exceeded: ${err?.error?.message || err?.message}. ` +
-        `If you see "limit: 0", image generation may not be enabled for your free tier project. ` +
-        `Check: https://ai.google.dev/gemini-api/docs/image-generation`
+    // Re-throw with clearer error message for rate limits
+    if (err?.status === 429 || err?.code === "rate_limit_exceeded") {
+      const rateError = new Error(
+        `OpenAI rate limit exceeded: ${err?.message || "Please try again later."}`
       );
-      (quotaError as any).status = 429;
-      (quotaError as any).error = err?.error;
-      throw quotaError;
+      (rateError as any).status = 429;
+      (rateError as any).error = err;
+      throw rateError;
+    }
+    // Invalid API key
+    if (err?.status === 401 || err?.message?.includes("Incorrect API key")) {
+      const authError = new Error(
+        "Invalid OpenAI API key. Check OPENAI_API_KEY in your .env file."
+      );
+      (authError as any).status = 401;
+      throw authError;
     }
     throw err;
   }
 }
 
 /**
- * Pro model (higher quality, 2K/4K) — use when available in your region
+ * Pro model (DALL-E 3 HD) — higher quality
  */
 export async function generateImageSDXL(
   options: GenerateImageOptions
 ): Promise<GenerationResult> {
-  return generateImage(options);
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "OPENAI_API_KEY is not configured. Get a key at https://platform.openai.com/api-keys and add it to your .env file."
+    );
+  }
+
+  const openai = new OpenAI({ apiKey });
+
+  try {
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: options.prompt.trim(),
+      n: 1,
+      size: "1024x1024",
+      quality: "hd",
+      response_format: "b64_json",
+    });
+
+    const imageData = response.data?.[0]?.b64_json;
+    if (!imageData) {
+      throw new Error("No image data in OpenAI response. Try a different prompt.");
+    }
+
+    const uploadResponse = await imagekit.upload({
+      file: imageData,
+      fileName: `ai-dalle-hd-${Date.now()}.png`,
+      folder: "/ai-generated",
+      tags: ["ai-generated", "dall-e-3-hd"],
+    });
+
+    return {
+      success: true,
+      url: uploadResponse.url,
+      prompt: options.prompt,
+      model: "dall-e-3-hd",
+    };
+  } catch (err: any) {
+    if (err?.status === 429 || err?.code === "rate_limit_exceeded") {
+      const rateError = new Error(
+        `OpenAI rate limit exceeded: ${err?.message || "Please try again later."}`
+      );
+      (rateError as any).status = 429;
+      throw rateError;
+    }
+    if (err?.status === 401 || err?.message?.includes("Incorrect API key")) {
+      const authError = new Error(
+        "Invalid OpenAI API key. Check OPENAI_API_KEY in your .env file."
+      );
+      (authError as any).status = 401;
+      throw authError;
+    }
+    throw err;
+  }
 }

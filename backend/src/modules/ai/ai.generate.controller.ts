@@ -49,36 +49,20 @@ export async function generateAIImage(
   } catch (error: any) {
     console.error("[AI Generation Error]", error);
 
-    // Handle Gemini API quota/billing errors
-    if (error?.status === 429 || error?.message?.includes("quota") || error?.message?.includes("RESOURCE_EXHAUSTED")) {
-      const errorMessage = error?.error?.message || error?.message || "";
-      
-      if (errorMessage.includes("limit: 0") || errorMessage.includes("free_tier")) {
-        return res.status(429).json({
-          success: false,
-          error: "Image generation quota limit is 0. This usually means Vertex AI API is not enabled or billing hasn't propagated yet.",
-          details: [
-            "1. Enable Vertex AI API: https://console.cloud.google.com/apis/library (search 'Vertex AI API')",
-            "2. Ensure billing is enabled: https://console.cloud.google.com/billing",
-            "3. Wait 5-10 minutes for changes to propagate",
-            "4. See backend/docs/GEMINI_TROUBLESHOOTING.md for detailed steps"
-          ],
-          helpUrl: "https://ai.google.dev/gemini-api/docs/image-generation",
-        });
-      }
-      
+    // Handle OpenAI rate limit errors
+    if (error?.status === 429 || error?.message?.includes("rate limit") || error?.code === "rate_limit_exceeded") {
       return res.status(429).json({
         success: false,
-        error: "Rate limit exceeded. Please try again later.",
-        retryAfter: error?.error?.details?.[0]?.retryDelay || "60s",
+        error: "OpenAI rate limit exceeded. Please try again later.",
+        retryAfter: "60s",
       });
     }
 
     // Handle API key errors
-    if (error?.message?.includes("API key") || error?.message?.includes("Invalid") || error?.status === 401) {
+    if (error?.message?.includes("API key") || error?.message?.includes("Invalid") || error?.message?.includes("Incorrect API key") || error?.status === 401) {
       return res.status(401).json({
         success: false,
-        error: "Invalid API key. Please check your GEMINI_API_KEY in .env",
+        error: "Invalid API key. Please check your OPENAI_API_KEY in .env",
       });
     }
 

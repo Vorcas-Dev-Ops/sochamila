@@ -263,14 +263,10 @@ export default function EditorLayout({
 
   /* ================= AI GENERATE ================= */
 
-  const onGenerateAIImage = useCallback(
-    async (prompt: string): Promise<string> => {
-      const url = await generateImage(prompt);
-      onAddImage(url);
-      return url;
-    },
-    [onAddImage]
-  );
+  const onGenerateAIImage = useCallback(async (prompt: string): Promise<string> => {
+    const url = await generateImage(prompt);
+    return url;
+  }, []);
 
   /* ================= UPDATE ================= */
 

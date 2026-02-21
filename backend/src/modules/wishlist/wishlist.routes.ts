@@ -6,8 +6,8 @@ import { getWishlist, addWishlistItem, removeWishlistItemController } from "./wi
 
 const router = Router();
 
-router.get("/", authMiddleware, roleMiddleware([Role.CUSTOMER]), (req, res) => getWishlist(req, res));
-router.post("/", authMiddleware, roleMiddleware([Role.CUSTOMER]), (req, res) => addWishlistItem(req, res));
-router.delete("/:id", authMiddleware, roleMiddleware([Role.CUSTOMER]), (req, res) => removeWishlistItemController(req, res));
+router.get("/", authMiddleware, roleMiddleware([Role.CUSTOMER, Role.ADMIN]), (req, res) => getWishlist(req, res));
+router.post("/", authMiddleware, roleMiddleware([Role.CUSTOMER, Role.ADMIN]), (req, res) => addWishlistItem(req, res));
+router.delete("/:id", authMiddleware, roleMiddleware([Role.CUSTOMER, Role.ADMIN]), (req, res) => removeWishlistItemController(req, res));
 
 export default router;

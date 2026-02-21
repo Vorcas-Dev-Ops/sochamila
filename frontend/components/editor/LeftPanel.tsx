@@ -13,6 +13,7 @@ import {
 } from "@/types/editor";
 
 import { TextOptions } from "@/types/editor-options";
+import { editImage, type ImageEditAction } from "@/lib/api/ai";
 
 /* ======================================================
    TYPES
@@ -91,6 +92,82 @@ function CollapsibleSection({
   );
 }
 
+/* ================= IMAGE EDIT SECTION ================= */
+
+interface ImageEditSectionProps {
+  imageSrc: string;
+  onUpdateImage: (patch: Partial<ImageLayer>) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+function ImageEditSection({
+  imageSrc,
+  onUpdateImage,
+  isOpen,
+  onToggle,
+}: ImageEditSectionProps) {
+  const [loading, setLoading] = useState<ImageEditAction | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleEdit = async (action: ImageEditAction) => {
+    if (!imageSrc) return;
+    setError(null);
+    setLoading(action);
+    try {
+      const newUrl = await editImage(imageSrc, action);
+      onUpdateImage({ src: newUrl });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Edit failed");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <CollapsibleSection
+      title="Edit image"
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
+      <p className="text-xs text-slate-500 mb-2">
+        Remove background or upscale. Changes apply to the mockup immediately.
+      </p>
+      {error && (
+        <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600 mb-2">
+          {error}
+        </div>
+      )}
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => handleEdit("remove-bg")}
+          disabled={!!loading}
+          className="w-full py-2 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 font-medium text-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {loading === "remove-bg" ? (
+            <span className="animate-pulse">Processing…</span>
+          ) : (
+            <>🖼️ Remove background</>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleEdit("upscale")}
+          disabled={!!loading}
+          className="w-full py-2 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 font-medium text-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {loading === "upscale" ? (
+            <span className="animate-pulse">Upscaling…</span>
+          ) : (
+            <>⬆️ Upscale image</>
+          )}
+        </button>
+      </div>
+    </CollapsibleSection>
+  );
+}
+
 /* ======================================================
    COMPONENT
 ====================================================== */
@@ -125,6 +202,7 @@ export default function LeftPanel({
     rotation: false,
     upload: true,
     imageProps: true,
+    imageEdit: true,
     aiGeneration: true,
     generatedImages: false,
     patterns: true,
@@ -1010,75 +1088,87 @@ export default function LeftPanel({
 
           {/* ========== IMAGE PROPERTIES ========== */}
           {selectedLayer?.type === "image" && (
-            <CollapsibleSection
-              title="Image Properties"
-              isOpen={expandedSections.imageProps}
-              onToggle={() =>
-                setExpandedSections(s => ({ ...s, imageProps: !s.imageProps }))
-              }
-            >
-              <div className="space-y-3">
-                <Range
-                  label="Opacity"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={(selectedLayer as ImageLayer).opacity ?? 1}
-                  onChange={v => onUpdateImage({ opacity: v })}
-                />
+            <>
+              <CollapsibleSection
+                title="Image Properties"
+                isOpen={expandedSections.imageProps}
+                onToggle={() =>
+                  setExpandedSections(s => ({ ...s, imageProps: !s.imageProps }))
+                }
+              >
+                <div className="space-y-3">
+                  <Range
+                    label="Opacity"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={(selectedLayer as ImageLayer).opacity ?? 1}
+                    onChange={v => onUpdateImage({ opacity: v })}
+                  />
 
-                {selectedLayer && (
-                  <div className="space-y-3">
-                    <label className="block text-xs font-semibold text-gray-900">
-                      Rotation: {selectedLayer.rotation || 0}°
-                    </label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={360}
-                      step={1}
-                      value={selectedLayer.rotation || 0}
-                      onChange={e => {
-                        const rotation = parseInt(e.target.value, 10);
-                        onUpdateImage({ rotation });
-                      }}
-                      className="w-full"
-                    />
-                    <div className="flex gap-2 text-xs">
-                      <button
-                        onClick={() => {
-                          const rotation = ((selectedLayer.rotation || 0) - 45 + 360) % 360;
+                  {selectedLayer && (
+                    <div className="space-y-3">
+                      <label className="block text-xs font-semibold text-gray-900">
+                        Rotation: {selectedLayer.rotation || 0}°
+                      </label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={360}
+                        step={1}
+                        value={selectedLayer.rotation || 0}
+                        onChange={e => {
+                          const rotation = parseInt(e.target.value, 10);
                           onUpdateImage({ rotation });
                         }}
-                        className="flex-1 bg-slate-200 hover:bg-slate-300 py-1 rounded text-center transition"
-                        title="Rotate -45°"
-                      >
-                        ↺ -45°
-                      </button>
-                      <button
-                        onClick={() => {
-                          onUpdateImage({ rotation: 0 });
-                        }}
-                        className="flex-1 bg-slate-200 hover:bg-slate-300 py-1 rounded text-center transition"
-                        title="Reset rotation"
-                      >
-                        Reset
-                      </button>
-                      <button
-                        onClick={() => {
-                          const rotation = ((selectedLayer.rotation || 0) + 45) % 360;
-                          onUpdateImage({ rotation });
-                        }}
-                        className="flex-1 bg-slate-200 hover:bg-slate-300 py-1 rounded text-center transition"
-                        title="Rotate +45°"
-                      >
-                        +45° ↻
-                      </button>
+                        className="w-full"
+                      />
+                      <div className="flex gap-2 text-xs">
+                        <button
+                          onClick={() => {
+                            const rotation = ((selectedLayer.rotation || 0) - 45 + 360) % 360;
+                            onUpdateImage({ rotation });
+                          }}
+                          className="flex-1 bg-slate-200 hover:bg-slate-300 py-1 rounded text-center transition"
+                          title="Rotate -45°"
+                        >
+                          ↺ -45°
+                        </button>
+                        <button
+                          onClick={() => {
+                            onUpdateImage({ rotation: 0 });
+                          }}
+                          className="flex-1 bg-slate-200 hover:bg-slate-300 py-1 rounded text-center transition"
+                          title="Reset rotation"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          onClick={() => {
+                            const rotation = ((selectedLayer.rotation || 0) + 45) % 360;
+                            onUpdateImage({ rotation });
+                          }}
+                          className="flex-1 bg-slate-200 hover:bg-slate-300 py-1 rounded text-center transition"
+                          title="Rotate +45°"
+                        >
+                          +45° ↻
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            </CollapsibleSection>
+                  )}
+                </div>
+              </CollapsibleSection>
+
+              {/* ========== EDIT IMAGE (Remove bg, Upscale) — updates mockup immediately ========== */}
+              <ImageEditSection
+                imageSrc={(selectedLayer as ImageLayer).src}
+                onUpdateImage={onUpdateImage}
+                isOpen={expandedSections.imageEdit}
+                onToggle={() =>
+                  setExpandedSections(s => ({ ...s, imageEdit: !s.imageEdit }))
+                }
+              />
+            </>
           )}
         </section>
       )}
@@ -1120,6 +1210,18 @@ export default function LeftPanel({
               >
                 {aiLoading ? "Generating..." : "✨ Generate Image"}
               </button>
+
+              {aiLoading && (
+                <div className="mt-2 space-y-1.5">
+                  <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full w-1/3 bg-indigo-500 rounded-full animate-pulse"
+                      style={{ animationDuration: "0.8s" }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 text-center">Creating your image…</p>
+                </div>
+              )}
             </div>
           </CollapsibleSection>
 
@@ -1141,7 +1243,10 @@ export default function LeftPanel({
               {aiImages.map((src, i) => (
                 <button
                   key={i}
-                  onClick={() => onAddImage(src)}
+                  onClick={() => {
+                    onAddImage(src);
+                    setActiveTab("image");
+                  }}
                   className="border rounded overflow-hidden hover:ring-2 ring-indigo-500 transition"
                 >
                   <img

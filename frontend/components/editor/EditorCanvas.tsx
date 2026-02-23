@@ -48,6 +48,8 @@ interface EditorCanvasProps {
   ) => void;
 
   deleteLayer: (id: string) => void;
+  duplicateLayer: (id: string) => void;
+  rotateLayer: (id: string, angle: number) => void;
 
   /** When true, hide selection UI and labels so captured preview shows only the design */
   captureMode?: boolean;
@@ -124,6 +126,8 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
     setSelectedLayerId,
     updateLayer,
     deleteLayer,
+    duplicateLayer,
+    rotateLayer,
     captureMode = false,
     availableSides = ["front", "back", "left", "right"],
     onSideChange,
@@ -208,6 +212,20 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
         ),
     [layers, side]
   );
+
+  /* ================= AUTO-ADJUST LAYER HEIGHT ================= */
+
+  const getAutoLayerHeight = (layer: EditorLayer, defaultHeight: number): number => {
+    if (!isTextLayer(layer)) return defaultHeight;
+    
+    const textLayer = layer as TextLayer;
+    const lineHeightValue = textLayer.lineHeight ?? 1.2;
+    const calculatedHeight = Math.ceil(
+      textLayer.fontSize * lineHeightValue * 1.5
+    );
+    
+    return Math.max(calculatedHeight, defaultHeight);
+  };
 
   /* ================= RESIZE OBSERVER ================= */
 
@@ -328,11 +346,14 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
               const y =
                 layer.y ?? (printArea.h - height) / 2;
 
+              // Auto-adjust height for text layers based on content
+              const layerHeight = getAutoLayerHeight(layer, height);
+
               return (
                 <Rnd
                   key={layer.id}
                   bounds="parent"
-                  size={{ width, height }}
+                  size={{ width, height: layerHeight }}
                   position={{ x, y }}
                   onMouseDown={e => {
                     e.stopPropagation();
@@ -344,14 +365,27 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                       y: d.y,
                     })
                   }
-                  onResizeStop={(_, __, ref, ___, pos) =>
-                    updateLayer(layer.id, layer.type, {
-                      width: ref.offsetWidth,
-                      height: ref.offsetHeight,
+                  onResizeStop={(_, __, ref, ___, pos) => {
+                    const newWidth = ref.offsetWidth;
+                    const newHeight = ref.offsetHeight;
+                    const widthRatio = newWidth / (width || 1);
+                    
+                    // For text layers, scale the font size with the width
+                    const patch: any = {
+                      width: newWidth,
+                      height: newHeight,
                       x: pos.x,
                       y: pos.y,
-                    })
-                  }
+                    };
+                    
+                    if (isTextLayer(layer)) {
+                      const textLayer = layer as TextLayer;
+                      const newFontSize = Math.max(8, Math.round(textLayer.fontSize * widthRatio));
+                      patch.fontSize = newFontSize;
+                    }
+                    
+                    updateLayer(layer.id, layer.type, patch);
+                  }}
                   style={{
                     outline: !captureMode && selected
                       ? "2px solid #6366f1"
@@ -363,8 +397,50 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                   className={`${!captureMode && selected ? "shadow-lg ring-2 ring-indigo-500" : ""}`}
                 >
                   {!captureMode && selected && (
-                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-50">
-                      {isTextLayer(layer) ? "TEXT" : isImageLayer(layer) || isStickerLayer(layer) ? "IMAGE" : "PATTERN"} · {layer.rotation || 0}°
+                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-indigo-600 text-white text-xs px-2 py-1.5 rounded whitespace-nowrap z-50 flex items-center gap-1.5 shadow-lg ring-1 ring-indigo-700 pointer-events-auto">
+                      <span className="flex items-center gap-1">
+                        <span>{isTextLayer(layer) ? "TEXT" : isImageLayer(layer) || isStickerLayer(layer) ? "IMAGE" : "PATTERN"}</span>
+                        <span className="text-indigo-200">·</span>
+                        <span>{layer.rotation || 0}°</span>
+                      </span>
+                      <div className="flex gap-1 ml-1 border-l border-indigo-400 pl-1.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            rotateLayer(layer.id, 45);
+                          }}
+                          className="p-0.5 hover:bg-indigo-700 rounded transition text-indigo-100 hover:text-white"
+                          title="Rotate 45°"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            duplicateLayer(layer.id);
+                          }}
+                          className="p-0.5 hover:bg-indigo-700 rounded transition text-indigo-100 hover:text-white"
+                          title="Duplicate"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteLayer(layer.id);
+                          }}
+                          className="p-0.5 hover:bg-red-500 rounded transition text-indigo-100 hover:text-white"
+                          title="Delete"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   )}
                   <div
@@ -635,7 +711,11 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
   }
 
   return (
-    <div style={style} key={`${layer.fontFamily}-${fontLoaded}`}>
+    <div 
+      style={style} 
+      key={`${layer.fontFamily}-${fontLoaded}`}
+      className="w-full h-full overflow-hidden p-2"
+    >
       {layer.text}
     </div>
   );

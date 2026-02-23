@@ -67,3 +67,35 @@ export async function generateImage(prompt: string): Promise<string> {
   
   return result.url;
 }
+
+/* ======================================================
+   IMAGE EDIT (Remove background, Upscale)
+====================================================== */
+
+export type ImageEditAction = "remove-bg" | "upscale";
+
+export interface ImageEditResponse {
+  success: boolean;
+  url: string;
+  action: ImageEditAction;
+}
+
+/**
+ * Edit an image (remove background or upscale).
+ * Returns the new image URL to use on the layer — mockup updates when you set layer src to this.
+ */
+export async function editImage(
+  imageUrl: string,
+  action: ImageEditAction
+): Promise<string> {
+  if (!imageUrl?.trim()) throw new Error("Image URL is required");
+  const response = await api.post<ImageEditResponse>("/ai/image-edit", {
+    imageUrl: imageUrl.trim(),
+    action,
+  });
+  const data = response.data;
+  if (!data?.success || !data?.url) {
+    throw new Error(data?.error || "Image edit failed");
+  }
+  return data.url;
+}

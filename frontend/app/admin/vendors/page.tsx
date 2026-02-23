@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { 
@@ -19,7 +20,8 @@ import {
   Search,
   Filter,
   MoreVertical,
-  Eye
+  Eye,
+  ArrowLeft
 } from "lucide-react";
 
 interface Vendor {
@@ -43,6 +45,7 @@ interface VendorWithStats extends Vendor {
 }
 
 export default function AdminVendorsList() {
+  const router = useRouter();
   const [vendors, setVendors] = useState<VendorWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [vendorStats, setVendorStats] = useState<Record<string, VendorStats>>({});
@@ -161,12 +164,21 @@ export default function AdminVendorsList() {
       {/* ================= HEADER & STATS ================= */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Store className="w-7 h-7 text-indigo-600" />
-              Vendor Management
-            </h1>
-            <p className="text-gray-500 mt-1">Manage your marketplace vendors and track their performance</p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.back()}
+              className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-700 hover:text-gray-900"
+              title="Go back"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Store className="w-7 h-7 text-indigo-600" />
+                Vendor Management
+              </h1>
+              <p className="text-gray-500 mt-1">Manage your marketplace vendors and track their performance</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">

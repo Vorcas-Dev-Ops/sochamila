@@ -21,21 +21,32 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const { totalItems } = useCart();
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? sessionStorage.getItem("token") : null;
     if (!token) {
       setIsLoggedIn(false);
+      setUserRole(null);
       return;
     }
     try {
-      const decoded = jwtDecode<{ exp: number }>(token);
+      const decoded = jwtDecode<{ exp: number; role: string }>(token);
       setIsLoggedIn(decoded.exp * 1000 > Date.now());
+      setUserRole(decoded.role || null);
     } catch {
       setIsLoggedIn(false);
+      setUserRole(null);
     }
   }, []);
+
+  // Determine dashboard URL based on user role
+  const getDashboardUrl = () => {
+    if (userRole === "ADMIN") return "/admin";
+    if (userRole === "VENDOR") return "/admin/vendors/dashboard";
+    return "/dashboard";
+  };
 
   const navLinks = [
     { name: "Shop", href: "/products", requiresAuth: false },
@@ -109,7 +120,7 @@ export default function Navbar() {
           )}
           {isLoggedIn && (
             <Link
-              href="/dashboard"
+              href={getDashboardUrl()}
               className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
             >
               <LayoutDashboard size={18} />
@@ -231,7 +242,7 @@ export default function Navbar() {
               )}
               {isLoggedIn && (
                 <Link
-                  href="/dashboard"
+                  href={getDashboardUrl()}
                   className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
                   onClick={() => setMobileOpen(false)}
                 >

@@ -354,6 +354,36 @@ export default function EditorLayout({
     setSelectedLayerId(null);
   }, []);
 
+  /* ================= DUPLICATE ================= */
+
+  const duplicateLayer = useCallback((id: string) => {
+    const layerToDuplicate = layers.find(l => l.id === id);
+    if (!layerToDuplicate) return;
+
+    const duplicated: EditorLayer = {
+      ...layerToDuplicate,
+      id: nanoid(),
+      x: (layerToDuplicate.x ?? 0) + 20,
+      y: (layerToDuplicate.y ?? 0) + 20,
+      zIndex: nextZIndex,
+    };
+
+    setLayers(prev => [...prev, duplicated]);
+    setSelectedLayerId(duplicated.id);
+  }, [layers, nextZIndex]);
+
+  /* ================= ROTATE ================= */
+
+  const rotateLayer = useCallback((id: string, angle: number) => {
+    setLayers(prev =>
+      prev.map(l =>
+        l.id === id
+          ? { ...l, rotation: ((l.rotation || 0) + angle + 360) % 360 }
+          : l
+      )
+    );
+  }, []);
+
   /* ================= PREVIEW ================= */
 
   // Function to capture all sides as images
@@ -635,6 +665,8 @@ export default function EditorLayout({
               layers={layers}
               updateLayer={updateLayer}
               deleteLayer={deleteLayer}
+              duplicateLayer={duplicateLayer}
+              rotateLayer={rotateLayer}
               selectedLayerId={selectedLayerId}
               setSelectedLayerId={setSelectedLayerId}
               captureMode={isCapturingPreview}

@@ -1615,18 +1615,70 @@ function Range({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const [inputValue, setInputValue] = useState(value.toString());
+
+  // Clamp value between min and max
+  const clampValue = (v: number) => {
+    return Math.max(min, Math.min(max, v));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleInputBlur = () => {
+    const num = parseFloat(inputValue);
+    if (!isNaN(num)) {
+      const clamped = clampValue(num);
+      onChange(clamped);
+      setInputValue(clamped.toString());
+    } else {
+      setInputValue(value.toString());
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -step : step;
+    const newValue = clampValue(value + delta);
+    onChange(newValue);
+    setInputValue(newValue.toString());
+  };
+
+  React.useEffect(() => {
+    setInputValue(value.toString());
+  }, [value]);
+
   return (
     <div>
-      <label className="text-xs">{label}</label>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={e => onChange(+e.target.value)}
-        className="w-full accent-indigo-600"
-      />
+      <label className="text-xs block mb-1">{label}</label>
+      <div className="flex gap-2 items-center">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={e => {
+            const newVal = +e.target.value;
+            onChange(newVal);
+            setInputValue(newVal.toString());
+          }}
+          className="flex-1 accent-indigo-600"
+        />
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          onWheel={handleWheel}
+          className="w-16 px-2 py-1 text-xs border border-slate-300 rounded text-right bg-slate-50 hover:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-600 focus:bg-white"
+          title="Scroll to adjust value"
+        />
+      </div>
     </div>
   );
 }

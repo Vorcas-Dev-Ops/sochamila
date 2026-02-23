@@ -107,20 +107,33 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        <button
-          onClick={loadData}
-          disabled={refreshing}
-          className="
-            flex items-center gap-2 px-4 py-2 rounded-lg border
-            text-sm hover:bg-gray-50 transition
-          "
-        >
-          <RefreshCcw
-            size={16}
-            className={refreshing ? "animate-spin" : ""}
-          />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="
+              flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600
+              text-sm font-medium hover:bg-indigo-50 transition
+            "
+            title="Switch to customer dashboard to place orders"
+          >
+            <ShoppingBag size={16} />
+            Customer Dashboard
+          </Link>
+          <button
+            onClick={loadData}
+            disabled={refreshing}
+            className="
+              flex items-center gap-2 px-4 py-2 rounded-lg border
+              text-sm hover:bg-gray-50 transition
+            "
+          >
+            <RefreshCcw
+              size={16}
+              className={refreshing ? "animate-spin" : ""}
+            />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* ================= ERROR ================= */}

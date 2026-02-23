@@ -18,51 +18,51 @@ const router = Router();
 /**
  * PUT /api/customer/profile
  * @description Update customer profile (name, email)
- * @requires CUSTOMER role
+ * @requires CUSTOMER or ADMIN role
  */
 router.put(
   "/profile",
   authMiddleware,
-  roleMiddleware([Role.CUSTOMER]),
+  roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
   (req: Request, res: Response) => require("./customer.controller").updateCustomerProfile(req, res)
 );
 
 /**
  * GET /api/customer/profile
  * @description Get customer profile
- * @requires CUSTOMER role
+ * @requires CUSTOMER or ADMIN role
  * @returns Customer profile data
  */
 router.get(
   "/profile",
   authMiddleware,
-  roleMiddleware([Role.CUSTOMER]),
+  roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
   (req: Request, res: Response) => getCustomerProfile(req, res)
 );
 
 /**
  * GET /api/customer/orders
  * @description Get customer's orders
- * @requires CUSTOMER role
+ * @requires CUSTOMER or ADMIN role
  * @returns Customer's orders with items
  */
 router.get(
   "/orders",
   authMiddleware,
-  roleMiddleware([Role.CUSTOMER]),
+  roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
   (req: Request, res: Response) => getCustomerOrders(req, res)
 );
 
 /**
  * GET /api/customer/stats
  * @description Get customer statistics
- * @requires CUSTOMER role
+ * @requires CUSTOMER or ADMIN role
  * @returns Customer stats (total orders, spending, etc.)
  */
 router.get(
   "/stats",
   authMiddleware,
-  roleMiddleware([Role.CUSTOMER]),
+  roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
   (req: Request, res: Response) => getCustomerStats(req, res)
 );
 

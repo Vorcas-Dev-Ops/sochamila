@@ -4,7 +4,7 @@ import { prisma } from "../../config/prisma";
    TYPES
 ====================================================== */
 
-const VIEW_BY_ORDER = ["FRONT", "BACK", "LEFT", "RIGHT"] as const;
+const VIEW_BY_ORDER = ["FRONT", "BACK", "RIGHT", "LEFT"] as const;
 
 export type Variant = {
   id: string;

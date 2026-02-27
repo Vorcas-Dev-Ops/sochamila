@@ -1,25 +1,30 @@
 import { Side, EditorLayer } from "@/types/editor";
+import { PrintAreaRatio, detectPrintAreaForSide, applySizeScaling } from "@/utils/detectPrintArea";
+
+export type { PrintAreaRatio };
 
 export type PrintProfile = {
   id: string;
   label: string;
   sides: Side[];
   masks: Record<Side, string>;
-  printAreaRatio: Record<
-    Side,
-    { x: number; y: number; w: number; h: number }
-  >;
+  printAreaRatio: Record<Side, PrintAreaRatio>;
   canvasDimensions: { width: number; height: number };
   minFontSize?: number;
   maxFontSize?: number;
   safetyMargin?: number;
+  
+  // Dynamic print area detection
+  autoDetectFromMask?: boolean;
+  sizeScaling?: boolean;
+  baseSize?: string;
 };
 
 export const PRINT_PROFILES: Record<string, PrintProfile> = {
   tshirt: {
     id: "tshirt",
     label: "T-Shirt",
-    sides: ["front", "back", "left", "right"],
+    sides: ["front", "back", "right", "left"],
     canvasDimensions: { width: 800, height: 1000 },
     minFontSize: 12,
     maxFontSize: 120,
@@ -33,20 +38,20 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
     },
 
     printAreaRatio: {
-      /* Main body */
-      front: { x: 0.24, y: 0.22, w: 0.52, h: 0.64 },
-      back:  { x: 0.24, y: 0.22, w: 0.52, h: 0.64 },
+      /* Main body - centered, conservative */
+      front: { x: 0.27, y: 0.20, w: 0.44, h: 0.66 },
+      back:  { x: 0.26, y: 0.19, w: 0.46, h: 0.67 },
 
-      /* Short sleeves */
-      left:  { x: 0.30, y: 0.30, w: 0.40, h: 0.40 },
-      right: { x: 0.30, y: 0.30, w: 0.40, h: 0.40 },
+      /* Short sleeves - smaller, centered on sleeve */
+      left:  { x: 0.32, y: 0.38, w: 0.45, h: 0.45 },
+      right: { x: 0.23, y: 0.39, w: 0.40, h: 0.43 },
     },
   },
 
   longsleeve: {
     id: "longsleeve",
     label: "Long Sleeve T-Shirt",
-    sides: ["front", "back", "left", "right"],
+    sides: ["front", "back", "right", "left"],
     canvasDimensions: { width: 800, height: 1000 },
     minFontSize: 12,
     maxFontSize: 120,
@@ -60,13 +65,13 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
     },
 
     printAreaRatio: {
-      /* Main body */
-      front: { x: 0.24, y: 0.22, w: 0.52, h: 0.64 },
-      back:  { x: 0.24, y: 0.22, w: 0.52, h: 0.64 },
+      /* Main body - centered, conservative */
+      front: { x: 0.28, y: 0.25, w: 0.44, h: 0.55 },
+      back:  { x: 0.28, y: 0.25, w: 0.44, h: 0.55 },
 
-      /* Long sleeves - extended vertical space */
-      left:  { x: 0.25, y: 0.18, w: 0.50, h: 0.65 },
-      right: { x: 0.25, y: 0.18, w: 0.50, h: 0.65 },
+      /* Long sleeves - narrower to fit sleeve width */
+      left:  { x: 0.32, y: 0.20, w: 0.36, h: 0.58 },
+      right: { x: 0.32, y: 0.20, w: 0.36, h: 0.58 },
     },
   },
 
@@ -87,18 +92,20 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
     },
 
     printAreaRatio: {
-      front: { x: 0.20, y: 0.18, w: 0.60, h: 0.70 },
-      back:  { x: 0.20, y: 0.18, w: 0.60, h: 0.70 },
+      /* Jersey - centered chest area */
+      front: { x: 0.25, y: 0.22, w: 0.50, h: 0.60 },
+      back:  { x: 0.25, y: 0.22, w: 0.50, h: 0.60 },
 
-      left:  { x: 0.32, y: 0.32, w: 0.36, h: 0.36 },
-      right: { x: 0.32, y: 0.32, w: 0.36, h: 0.36 },
+      /* Jersey sleeves - small centered area */
+      left:  { x: 0.38, y: 0.35, w: 0.24, h: 0.30 },
+      right: { x: 0.38, y: 0.35, w: 0.24, h: 0.30 },
     },
   },
 
   shirt: {
     id: "shirt",
     label: "Shirt",
-    sides: ["front", "back", "left", "right"],
+    sides: ["front", "back", "right", "left"],
     canvasDimensions: { width: 800, height: 1000 },
     minFontSize: 12,
     maxFontSize: 120,
@@ -112,47 +119,50 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
     },
 
     printAreaRatio: {
-      /* Button-up shirt - slightly larger chest area */
-      front: { x: 0.22, y: 0.25, w: 0.56, h: 0.60 },
-      back:  { x: 0.22, y: 0.25, w: 0.56, h: 0.60 },
+      /* Button-up shirt - conservative chest area */
+      front: { x: 0.26, y: 0.26, w: 0.48, h: 0.55 },
+      back:  { x: 0.26, y: 0.26, w: 0.48, h: 0.55 },
 
-      /* Long sleeves */
-      left:  { x: 0.24, y: 0.18, w: 0.52, h: 0.64 },
-      right: { x: 0.24, y: 0.18, w: 0.52, h: 0.64 },
+      /* Half sleeves - shorter and centered */
+      left:  { x: 0.32, y: 0.32, w: 0.36, h: 0.35 },
+      right: { x: 0.32, y: 0.32, w: 0.36, h: 0.35 },
     },
   },
 
   sweatshirt: {
     id: "sweatshirt",
     label: "Sweatshirt",
-    sides: ["front", "back", "left", "right"],
+    sides: ["front", "back", "right", "left"],
     canvasDimensions: { width: 800, height: 1000 },
     minFontSize: 11,
     maxFontSize: 115,
     safetyMargin: 22,
+    autoDetectFromMask: true,  // Enable dynamic detection from masks
+    sizeScaling: true,
+    baseSize: "M",
 
     masks: {
-      front: "/masks/sweatshirt/front.png",
-      back: "/masks/sweatshirt/back.png",
-      left: "/masks/sweatshirt/left.png",
-      right: "/masks/sweatshirt/right.png",
+      front: "/masks/sweatshirt/front.webp",
+      back: "/masks/sweatshirt/back.webp",
+      left: "/masks/sweatshirt/left.webp",
+      right: "/masks/sweatshirt/right.webp",
     },
 
     printAreaRatio: {
-      /* Sweatshirt - larger print area on chest */
-      front: { x: 0.23, y: 0.24, w: 0.54, h: 0.62 },
-      back:  { x: 0.23, y: 0.24, w: 0.54, h: 0.62 },
+      /* Sweatshirt - centered, well within boundaries */
+      front: { x: 0.28, y: 0.26, w: 0.44, h: 0.52 },
+      back:  { x: 0.28, y: 0.26, w: 0.44, h: 0.52 },
 
-      /* Long sleeves - similar to hoodie */
-      left:  { x: 0.23, y: 0.16, w: 0.54, h: 0.68 },
-      right: { x: 0.23, y: 0.16, w: 0.54, h: 0.68 },
+      /* Long sleeves - extended length for sweatshirt (fallback values) */
+      left:  { x: 0.36, y: 0.18, w: 0.28, h: 0.62 },
+      right: { x: 0.36, y: 0.18, w: 0.28, h: 0.62 },
     },
   },
 
   jacket: {
     id: "jacket",
     label: "Jacket",
-    sides: ["front", "back", "left", "right"],
+    sides: ["front", "back", "right", "left"],
     canvasDimensions: { width: 800, height: 1000 },
     minFontSize: 10,
     maxFontSize: 130,
@@ -166,20 +176,20 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
     },
 
     printAreaRatio: {
-      /* Jacket - larger overall print areas */
-      front: { x: 0.20, y: 0.20, w: 0.60, h: 0.70 },
-      back:  { x: 0.20, y: 0.20, w: 0.60, h: 0.70 },
+      /* Jacket - conservative chest area */
+      front: { x: 0.26, y: 0.24, w: 0.48, h: 0.58 },
+      back:  { x: 0.26, y: 0.24, w: 0.48, h: 0.58 },
 
-      /* Long sleeves - extended */
-      left:  { x: 0.20, y: 0.12, w: 0.60, h: 0.76 },
-      right: { x: 0.20, y: 0.12, w: 0.60, h: 0.76 },
+      /* Long sleeves - moderate size */
+      left:  { x: 0.30, y: 0.18, w: 0.40, h: 0.64 },
+      right: { x: 0.30, y: 0.18, w: 0.40, h: 0.64 },
     },
   },
 
   hoodie: {
     id: "hoodie",
     label: "Hoodie",
-    sides: ["front", "back", "left", "right"],
+    sides: ["front", "back", "right", "left"],
     canvasDimensions: { width: 800, height: 1000 },
     minFontSize: 10,
     maxFontSize: 110,
@@ -193,12 +203,13 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
     },
 
     printAreaRatio: {
-      front: { x: 0.26, y: 0.28, w: 0.48, h: 0.50 },
-      back:  { x: 0.26, y: 0.28, w: 0.48, h: 0.50 },
+      /* Hoodie - centered chest area */
+      front: { x: 0.28, y: 0.28, w: 0.44, h: 0.50 },
+      back:  { x: 0.28, y: 0.28, w: 0.44, h: 0.50 },
 
-      /* Long sleeves - extended vertical and horizontal space */
-      left:  { x: 0.22, y: 0.15, w: 0.56, h: 0.70 },
-      right: { x: 0.22, y: 0.15, w: 0.56, h: 0.70 },
+      /* Long sleeves - narrower to fit */
+      left:  { x: 0.32, y: 0.20, w: 0.36, h: 0.60 },
+      right: { x: 0.32, y: 0.20, w: 0.36, h: 0.60 },
     },
   },
 };
@@ -209,16 +220,23 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
 
 /**
  * Get absolute print area dimensions for a product and side
+ * Supports dynamic detection from masks and size scaling
  */
 export function getPrintArea(
   profileId: string,
-  side: Side
+  side: Side,
+  size?: string
 ): { x: number; y: number; w: number; h: number } | null {
   const profile = PRINT_PROFILES[profileId];
   if (!profile) return null;
 
-  const ratio = profile.printAreaRatio[side];
+  let ratio = profile.printAreaRatio[side];
   if (!ratio) return null;
+
+  // Apply size scaling if enabled and size provided
+  if (profile.sizeScaling && size) {
+    ratio = applySizeScaling(ratio, size, profile.baseSize || "M");
+  }
 
   const { width, height } = profile.canvasDimensions;
   return {
@@ -230,14 +248,76 @@ export function getPrintArea(
 }
 
 /**
+ * Async version that auto-detects print area from mask if enabled
+ */
+export async function getPrintAreaAsync(
+  profileId: string,
+  side: Side,
+  size?: string
+): Promise<{ x: number; y: number; w: number; h: number } | null> {
+  const profile = PRINT_PROFILES[profileId];
+  if (!profile) return null;
+
+  let ratio: PrintAreaRatio | null = profile.printAreaRatio[side];
+
+  // Auto-detect from mask if enabled (uses side-specific detection)
+  if (profile.autoDetectFromMask && profile.masks[side]) {
+    const detectedRatio = await detectPrintAreaForSide(profile.masks[side], side);
+    if (detectedRatio) {
+      ratio = detectedRatio;
+    }
+  }
+
+  if (!ratio) return null;
+
+  // Apply size scaling if enabled and size provided
+  if (profile.sizeScaling && size) {
+    ratio = applySizeScaling(ratio, size, profile.baseSize || "M");
+  }
+
+  const { width, height } = profile.canvasDimensions;
+  return {
+    x: ratio.x * width,
+    y: ratio.y * height,
+    w: ratio.w * width,
+    h: ratio.h * height,
+  };
+}
+
+/**
+ * Get print area with custom ratios (for dynamically uploaded products)
+ */
+export function getPrintAreaWithRatio(
+  ratio: PrintAreaRatio,
+  canvasDimensions: { width: number; height: number },
+  size?: string,
+  baseSize?: string
+): { x: number; y: number; w: number; h: number } {
+  let finalRatio = ratio;
+  
+  // Apply size scaling if size provided
+  if (size && baseSize) {
+    finalRatio = applySizeScaling(ratio, size, baseSize);
+  }
+
+  return {
+    x: finalRatio.x * canvasDimensions.width,
+    y: finalRatio.y * canvasDimensions.height,
+    w: finalRatio.w * canvasDimensions.width,
+    h: finalRatio.h * canvasDimensions.height,
+  };
+}
+
+/**
  * Check if a layer fits within the print area
  */
 export function isLayerInPrintArea(
   profileId: string,
   side: Side,
-  layer: { x: number; y: number; width: number; height: number }
+  layer: { x: number; y: number; width: number; height: number },
+  size?: string
 ): boolean {
-  const printArea = getPrintArea(profileId, side);
+  const printArea = getPrintArea(profileId, side, size);
   if (!printArea) return false;
 
   const margin = PRINT_PROFILES[profileId]?.safetyMargin || 0;
@@ -256,10 +336,11 @@ export function isLayerInPrintArea(
 export function autoAdjustLayer(
   profileId: string,
   side: Side,
-  layer: { x: number; y: number; width: number; height: number }
+  layer: { x: number; y: number; width: number; height: number },
+  size?: string
 ): { x: number; y: number; width: number; height: number } {
   const profile = PRINT_PROFILES[profileId];
-  const printArea = getPrintArea(profileId, side);
+  const printArea = getPrintArea(profileId, side, size);
 
   if (!profile || !printArea) return layer;
 
@@ -298,9 +379,10 @@ export function autoAdjustLayer(
 export function centerLayerInPrintArea(
   profileId: string,
   side: Side,
-  layer: { x: number; y: number; width: number; height: number }
+  layer: { x: number; y: number; width: number; height: number },
+  size?: string
 ): { x: number; y: number } {
-  const printArea = getPrintArea(profileId, side);
+  const printArea = getPrintArea(profileId, side, size);
   if (!printArea) return { x: layer.x, y: layer.y };
 
   const centerX = printArea.x + printArea.w / 2 - layer.width / 2;

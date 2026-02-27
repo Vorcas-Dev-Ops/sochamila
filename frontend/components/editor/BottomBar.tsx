@@ -27,7 +27,7 @@ export default function BottomBar({
       <div className="flex items-center gap-2">
         <span className="text-xs font-semibold text-gray-600 uppercase">Side:</span>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-          {(["front", "back", "left", "right"] as Side[]).map((side) => (
+          {(["front", "back", "right", "left"] as Side[]).map((side) => (
             <button
               key={side}
               onClick={() => setActiveSide(side)}

@@ -64,7 +64,7 @@ function resolvePreviewImage(
       (img) => (img as ImageWithView).view?.toUpperCase() === sideUpper
     );
     if (match?.image) return toFullUrl(match.image);
-    const order = ["front", "back", "left", "right"].indexOf(side);
+    const order = ["front", "back", "right", "left"].indexOf(side);
     if (order >= 0 && withView[order]?.image) {
       return toFullUrl(withView[order].image);
     }
@@ -337,7 +337,7 @@ export default function RightPanel({
             <div className="space-y-6">
               {/* Grid Layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {(["front", "back", "left", "right"] as Side[]).map((side) => (
+                {(["front", "back", "right", "left"] as Side[]).map((side) => (
                   <div 
                     key={side} 
                     className="border-2 border-gray-200 rounded-xl overflow-hidden bg-gray-50 p-4 hover:border-teal-500 hover:shadow-lg transition-all duration-200"

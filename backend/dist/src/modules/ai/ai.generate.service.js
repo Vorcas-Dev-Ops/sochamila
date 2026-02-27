@@ -1,114 +1,113 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateImageSDXL = void 0;
 exports.generateImage = generateImage;
-exports.generateImageFast = generateImageFast;
+exports.generateImageSDXL = generateImageSDXL;
+const openai_1 = __importDefault(require("openai"));
 const imagekit_1 = require("../../lib/imagekit");
-/* ======================================================
-   HUGGING FACE AI IMAGE GENERATION SERVICE
-====================================================== */
-const HF_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0";
 /* ================= GENERATE IMAGE ================= */
 /**
- * Generate an image using Hugging Face Stable Diffusion XL (free)
+ * Generate an image using OpenAI DALL-E 3
  * and upload to ImageKit for permanent storage
  */
 async function generateImage(options) {
-    const { prompt, negativePrompt = "blurry, bad quality, distorted" } = options;
-    const apiToken = process.env.HUGGINGFACE_API_TOKEN;
-    console.log(`[AI] Token check: ${apiToken ? 'Token exists (' + apiToken.slice(0, 10) + '...)' : 'NO TOKEN'}`);
-    if (!apiToken) {
-        throw new Error("HUGGINGFACE_API_TOKEN is not configured. Please add it to your .env file.");
-    }
-    console.log(`[AI] Generating image for prompt: "${prompt.slice(0, 50)}..."`);
-    // 1. Call Hugging Face Inference API
-    const response = await fetch(HF_API_URL, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${apiToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            inputs: prompt,
-            parameters: {
-                negative_prompt: negativePrompt,
-                num_inference_steps: 30,
-                guidance_scale: 7.5,
-            },
-        }),
-    });
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[AI] Hugging Face API error:`, errorText);
-        // Handle model loading (503 error)
-        if (response.status === 503) {
-            const errorJson = JSON.parse(errorText);
-            if (errorJson.error?.includes("loading")) {
-                throw new Error("Model is loading. Please try again in ~20 seconds.");
-            }
-        }
-        throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
-    }
-    // 2. Get image blob from response
-    const imageBlob = await response.blob();
-    const imageBuffer = Buffer.from(await imageBlob.arrayBuffer());
-    const base64Image = imageBuffer.toString("base64");
-    console.log(`[AI] Image generated, uploading to ImageKit...`);
-    // 3. Upload to ImageKit for permanent storage
-    const uploadResponse = await imagekit_1.imagekit.upload({
-        file: base64Image,
-        fileName: `ai-${Date.now()}.png`,
-        folder: "/ai-generated",
-        tags: ["ai-generated", "stable-diffusion-xl"],
-    });
-    console.log(`[AI] Upload complete: ${uploadResponse.url}`);
-    return {
-        success: true,
-        url: uploadResponse.url,
-        prompt,
-        model: "stable-diffusion-xl",
-    };
-}
-/* ================= ALTERNATIVE: FASTER MODEL ================= */
-const HF_FAST_API_URL = "https://router.huggingface.co/hf-inference/models/runwayml/stable-diffusion-v1-5";
-/**
- * Generate with Stable Diffusion 1.5 (faster, lower quality)
- */
-async function generateImageFast(options) {
     const { prompt } = options;
-    const apiToken = process.env.HUGGINGFACE_API_TOKEN;
-    if (!apiToken) {
-        throw new Error("HUGGINGFACE_API_TOKEN is not configured");
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+        throw new Error("OPENAI_API_KEY is not configured. Get a key at https://platform.openai.com/api-keys and add it to your .env file.");
     }
-    const response = await fetch(HF_FAST_API_URL, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${apiToken}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            inputs: prompt,
-        }),
-    });
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Hugging Face API error: ${response.status}`);
+    const openai = new openai_1.default({ apiKey });
+    try {
+        const response = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: prompt.trim(),
+            n: 1,
+            size: "1024x1024",
+            quality: "standard",
+            response_format: "b64_json",
+        });
+        const imageData = response.data?.[0]?.b64_json;
+        if (!imageData) {
+            throw new Error("No image data in OpenAI response. Try a different prompt.");
+        }
+        const uploadResponse = await imagekit_1.imagekit.upload({
+            file: imageData,
+            fileName: `ai-dalle-${Date.now()}.png`,
+            folder: "/ai-generated",
+            tags: ["ai-generated", "dall-e-3"],
+        });
+        return {
+            success: true,
+            url: uploadResponse.url,
+            prompt,
+            model: "dall-e-3",
+        };
     }
-    const imageBlob = await response.blob();
-    const imageBuffer = Buffer.from(await imageBlob.arrayBuffer());
-    const base64Image = imageBuffer.toString("base64");
-    const uploadResponse = await imagekit_1.imagekit.upload({
-        file: base64Image,
-        fileName: `ai-fast-${Date.now()}.png`,
-        folder: "/ai-generated",
-        tags: ["ai-generated", "sd-1.5"],
-    });
-    return {
-        success: true,
-        url: uploadResponse.url,
-        prompt,
-        model: "stable-diffusion-1.5",
-    };
+    catch (err) {
+        // Re-throw with clearer error message for rate limits
+        if (err?.status === 429 || err?.code === "rate_limit_exceeded") {
+            const rateError = new Error(`OpenAI rate limit exceeded: ${err?.message || "Please try again later."}`);
+            rateError.status = 429;
+            rateError.error = err;
+            throw rateError;
+        }
+        // Invalid API key
+        if (err?.status === 401 || err?.message?.includes("Incorrect API key")) {
+            const authError = new Error("Invalid OpenAI API key. Check OPENAI_API_KEY in your .env file.");
+            authError.status = 401;
+            throw authError;
+        }
+        throw err;
+    }
 }
-// Keep for backwards compatibility
-exports.generateImageSDXL = generateImage;
+/**
+ * Pro model (DALL-E 3 HD) — higher quality
+ */
+async function generateImageSDXL(options) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+        throw new Error("OPENAI_API_KEY is not configured. Get a key at https://platform.openai.com/api-keys and add it to your .env file.");
+    }
+    const openai = new openai_1.default({ apiKey });
+    try {
+        const response = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: options.prompt.trim(),
+            n: 1,
+            size: "1024x1024",
+            quality: "hd",
+            response_format: "b64_json",
+        });
+        const imageData = response.data?.[0]?.b64_json;
+        if (!imageData) {
+            throw new Error("No image data in OpenAI response. Try a different prompt.");
+        }
+        const uploadResponse = await imagekit_1.imagekit.upload({
+            file: imageData,
+            fileName: `ai-dalle-hd-${Date.now()}.png`,
+            folder: "/ai-generated",
+            tags: ["ai-generated", "dall-e-3-hd"],
+        });
+        return {
+            success: true,
+            url: uploadResponse.url,
+            prompt: options.prompt,
+            model: "dall-e-3-hd",
+        };
+    }
+    catch (err) {
+        if (err?.status === 429 || err?.code === "rate_limit_exceeded") {
+            const rateError = new Error(`OpenAI rate limit exceeded: ${err?.message || "Please try again later."}`);
+            rateError.status = 429;
+            throw rateError;
+        }
+        if (err?.status === 401 || err?.message?.includes("Incorrect API key")) {
+            const authError = new Error("Invalid OpenAI API key. Check OPENAI_API_KEY in your .env file.");
+            authError.status = 401;
+            throw authError;
+        }
+        throw err;
+    }
+}

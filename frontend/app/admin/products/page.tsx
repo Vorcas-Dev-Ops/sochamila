@@ -260,7 +260,7 @@ export default function AdminProductsPage() {
                   {/* ACTIONS */}
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-4">
-                      <Link href={`/admin/products/${product.id}`}>
+                      <Link href={`/admin/products/edit/${product.id}`}>
                         <Pencil size={16} />
                       </Link>
 

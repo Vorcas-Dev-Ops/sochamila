@@ -39,30 +39,25 @@ async function generateAIImage(req, res, next) {
     }
     catch (error) {
         console.error("[AI Generation Error]", error);
-        // Handle specific Replicate errors
-        if (error instanceof Error) {
-            if (error.message.includes("Invalid API token")) {
-                return res.status(401).json({
-                    success: false,
-                    error: "Invalid API configuration",
-                });
-            }
-            if (error.message.includes("rate limit")) {
-                return res.status(429).json({
-                    success: false,
-                    error: "Rate limit exceeded. Please try again later.",
-                });
-            }
-            if (error.message.includes("NSFW")) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Content policy violation. Please modify your prompt.",
-                });
-            }
+        // Handle OpenAI rate limit errors
+        if (error?.status === 429 || error?.message?.includes("rate limit") || error?.code === "rate_limit_exceeded") {
+            return res.status(429).json({
+                success: false,
+                error: "OpenAI rate limit exceeded. Please try again later.",
+                retryAfter: "60s",
+            });
         }
+        // Handle API key errors
+        if (error?.message?.includes("API key") || error?.message?.includes("Invalid") || error?.message?.includes("Incorrect API key") || error?.status === 401) {
+            return res.status(401).json({
+                success: false,
+                error: "Invalid API key. Please check your OPENAI_API_KEY in .env",
+            });
+        }
+        // Handle other errors
         res.status(500).json({
             success: false,
-            error: "Failed to generate image. Please try again.",
+            error: error?.message || "Failed to generate image. Please try again.",
         });
     }
 }

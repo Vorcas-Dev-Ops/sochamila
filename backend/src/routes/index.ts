@@ -13,6 +13,7 @@ import imagekitAuthRoutes from "./imagekit-auth";
 import uploadRoutes from "./upload";
 import wishlistRoutes from "../modules/wishlist/wishlist.routes";
 import aiRoutes from "../modules/ai/ai.routes";
+import jerseyRoutes from "../modules/jersey/jersey.routes";
 
 console.log("[ROUTES-INDEX] Starting route initialization...");
 console.log("[ROUTES-INDEX] vendorRoutes import successful:", vendorRoutes);
@@ -36,6 +37,9 @@ router.use("/graphics", graphicsRoutes);
 
 console.log("[ROUTES-INDEX] Mounting AI routes...");
 router.use("/ai", aiRoutes);
+
+console.log("[ROUTES-INDEX] Mounting jersey routes...");
+router.use("/jersey", jerseyRoutes);
 
 console.log("[ROUTES-INDEX] Mounting sticker routes...");
 router.use("/stickers", stickerRoutes);

@@ -34,7 +34,17 @@ app.use(express_1.default.urlencoded({ extended: true, limit: "10mb" }));
 /* ================================
    STATIC FILES
 ================================ */
-app.use("/uploads", express_1.default.static(path_1.default.join(__dirname, "../uploads")));
+const uploadsPath = path_1.default.join(__dirname, "../../uploads");
+console.log("[APP] Serving static files from:", uploadsPath);
+console.log("[APP] Uploads folder exists:", require("fs").existsSync(uploadsPath));
+// TEST ROUTE
+app.get("/test-static", (req, res) => {
+    res.json({ message: "test endpoint works" });
+});
+app.use("/uploads", express_1.default.static(uploadsPath, {
+    dotfiles: "allow",
+    cacheControl: false,
+}));
 /* ================================
    API ROUTES
 ================================ */

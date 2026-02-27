@@ -2,9 +2,5 @@
   "name": "sochamila-workspace",
   "version": "1.0.0",
   "description": "Print on demand design platform",
-  "private": true,
-  "workspaces": [
-    "frontend",
-    "backend"
-  ]
+  "private": true
 }

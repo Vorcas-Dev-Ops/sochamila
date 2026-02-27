@@ -4,10 +4,11 @@ exports.vendorRegisterService = vendorRegisterService;
 const prisma_1 = require("../../config/prisma");
 const hash_1 = require("../../utils/hash");
 const jwt_1 = require("../../utils/jwt");
+const cashfreeKyc_1 = require("../../utils/cashfreeKyc");
 /* =====================================================
    VENDOR REGISTRATION SERVICE
 ===================================================== */
-async function vendorRegisterService(data) {
+async function vendorRegisterService(data, options = {}) {
     try {
         // 1️⃣ Check if email already exists
         const existingEmail = await prisma_1.prisma.user.findUnique({
@@ -41,9 +42,36 @@ async function vendorRegisterService(data) {
                 throw new Error("UPI ID is required for UPI payout");
             }
         }
-        // 5️⃣ Hash password
+        // 5️⃣ Verify KYC documents with Cashfree (if not skipped)
+        let kycVerification;
+        const skipKYC = options.skipKYCVerification || process.env.SKIP_KYC_VERIFICATION === 'true';
+        if (!skipKYC) {
+            console.log("[VENDOR-REGISTER] Starting KYC verification with Cashfree...");
+            kycVerification = await (0, cashfreeKyc_1.verifyVendorKYCWithCashfree)({
+                pan: data.pan,
+                aadhaar: data.aadhaar,
+                gst: data.gst,
+                payoutMethod: data.payoutMethod,
+                accountNumber: data.accountNumber,
+                ifsc: data.ifsc,
+                upiId: data.upiId,
+            });
+            console.log("[VENDOR-REGISTER] KYC verification completed:", {
+                pan: kycVerification.pan.valid,
+                aadhaar: kycVerification.aadhaar.valid,
+                gst: kycVerification.gst?.valid,
+                bankAccount: kycVerification.bankAccount?.valid,
+                upi: kycVerification.upi?.valid,
+            });
+            // Check if all KYC is valid
+            if (!(0, cashfreeKyc_1.isKYCValid)(kycVerification)) {
+                const errors = (0, cashfreeKyc_1.getKYCErrorMessages)(kycVerification);
+                throw new Error(`KYC verification failed: ${errors.join("; ")}`);
+            }
+        }
+        // 6️⃣ Hash password
         const hashedPassword = await (0, hash_1.hashPassword)(data.password);
-        // 6️⃣ Create vendor user
+        // 7️⃣ Create vendor user
         const vendor = await prisma_1.prisma.user.create({
             data: {
                 name: `${data.firstName} ${data.lastName}`,
@@ -68,7 +96,7 @@ async function vendorRegisterService(data) {
                 upiId: data.upiId ? data.upiId.trim() : null,
             },
         });
-        // 7️⃣ Generate JWT token
+        // 8️⃣ Generate JWT token
         const token = (0, jwt_1.signToken)({
             id: vendor.id,
             role: vendor.role,
@@ -84,6 +112,7 @@ async function vendorRegisterService(data) {
                 firstName: vendor.firstName,
                 lastName: vendor.lastName,
             },
+            kycVerification,
         };
     }
     catch (error) {

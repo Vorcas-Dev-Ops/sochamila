@@ -88,7 +88,7 @@ exports.vendorRegister = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
         if (payoutMethod === "UPI" && !upiId) {
             return (0, response_1.sendError)(res, "UPI payout requires upiId", 400);
         }
-        const { token, vendor } = await (0, vendor_register_service_1.vendorRegisterService)({
+        const { token, vendor, kycVerification } = await (0, vendor_register_service_1.vendorRegisterService)({
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             email: email.trim(),
@@ -103,9 +103,10 @@ exports.vendorRegister = (0, asyncHandler_1.asyncHandler)(async (req, res) => {
             ifsc: ifsc ? ifsc.trim() : "",
             upiId: upiId ? upiId.trim() : "",
         });
-        return (0, response_1.sendSuccess)(res, "Vendor registration successful. Awaiting admin approval.", {
+        return (0, response_1.sendSuccess)(res, "Vendor registration successful. All KYC documents verified. Awaiting admin approval.", {
             token,
             vendor,
+            kycVerification,
         }, 201);
     }
     catch (error) {

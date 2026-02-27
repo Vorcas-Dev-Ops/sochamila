@@ -24,7 +24,7 @@ import type { ProductVariantImage } from "@/types/product";
 import { generateImage } from "@/lib/api/ai";
 import { useCart } from "@/lib/cart";
 
-type ToolTab = "products" | "designs" | "text" | "upload" | "ai";
+type ToolTab = "products" | "designs" | "text" | "upload" | "ai" | "stickers";
 
 /* ================= HELPERS ================= */
 
@@ -79,6 +79,9 @@ export default function EditorLayout({
   const [mobilePanelTab, setMobilePanelTab] = useState<
     "text" | "image" | "graphics" | "stickers" | "ai"
   >("text");
+
+  // Mobile tab options
+  const mobileTabs = ["text", "image", "graphics", "stickers", "ai"] as const;
 
   const selectedColor = variant.color ?? "default";
   const { addToCart } = useCart();
@@ -388,7 +391,7 @@ export default function EditorLayout({
 
   // Function to capture all sides as images
   const getPreviewImages = async (): Promise<Record<Side, string | null>> => {
-    const sides: Side[] = ["front", "back", "left", "right"];
+    const sides: Side[] = ["front", "back", "right", "left"];
     const previews: Record<Side, string | null> = {
       front: null,
       back: null,
@@ -438,14 +441,69 @@ export default function EditorLayout({
 
         try {
           const element = canvasRef.current;
+          
+          // Get print area bounds before capturing
+          const printAreaEl = element.querySelector('[style*="overflow: hidden"]') as HTMLElement;
+          let clipBounds = null;
+          
+          if (printAreaEl) {
+            const rect = element.getBoundingClientRect();
+            const printRect = printAreaEl.getBoundingClientRect();
+            clipBounds = {
+              x: printRect.left - rect.left,
+              y: printRect.top - rect.top,
+              width: printRect.width,
+              height: printRect.height,
+            };
+          }
+          
+          // Use html2canvas-pro for better rendering
+          const html2canvas = (await import('html2canvas-pro')).default;
           const canvas = await html2canvas(element, {
-            backgroundColor: "#ffffff",
+            backgroundColor: null,
             scale: 2,
             useCORS: true,
-            allowTaint: false,
+            allowTaint: true,
             imageTimeout: 8000,
             logging: false,
           });
+          
+          // If we have clip bounds, apply clipping
+          if (clipBounds) {
+            const scale = 2;
+            const clipX = clipBounds.x * scale;
+            const clipY = clipBounds.y * scale;
+            const clipW = clipBounds.width * scale;
+            const clipH = clipBounds.height * scale;
+            
+            // Create final canvas
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = canvas.width;
+            finalCanvas.height = canvas.height;
+            const finalCtx = finalCanvas.getContext('2d');
+            
+            if (finalCtx) {
+              // Fill with white background
+              finalCtx.fillStyle = '#ffffff';
+              finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+              
+              // Create a clipping path for the print area
+              finalCtx.save();
+              finalCtx.beginPath();
+              finalCtx.rect(clipX, clipY, clipW, clipH);
+              finalCtx.clip();
+              
+              // Draw the captured canvas (only print area region will be visible due to clip)
+              finalCtx.drawImage(canvas, 0, 0);
+              
+              finalCtx.restore();
+              
+              const dataUrl = finalCanvas.toDataURL("image/png");
+              previews[side] = dataUrl;
+              continue;
+            }
+          }
+          
           const dataUrl = canvas.toDataURL("image/png");
           previews[side] = dataUrl;
         } catch (err) {
@@ -471,6 +529,7 @@ export default function EditorLayout({
       case "upload": return "image";
       case "ai": return "ai";
       case "designs": return "graphics";
+      case "stickers": return "stickers";
       default: return "text";
     }
   };
@@ -532,12 +591,12 @@ export default function EditorLayout({
             </div>
 
             {/* Mobile Icon Menu */}
-            <div className="p-3 grid grid-cols-4 gap-2 border-b">
-              {["text", "image", "graphics", "ai"].map((tab) => (
+            <div className="p-3 grid grid-cols-5 gap-2 border-b">
+              {mobileTabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
-                    setMobilePanelTab(tab as any);
+                    setMobilePanelTab(tab);
                   }}
                   className={`py-2 px-1 rounded-lg text-xs font-medium capitalize text-center ${
                     mobilePanelTab === tab ? "bg-indigo-100 text-indigo-700" : "bg-gray-50 text-gray-700"
@@ -670,7 +729,7 @@ export default function EditorLayout({
               selectedLayerId={selectedLayerId}
               setSelectedLayerId={setSelectedLayerId}
               captureMode={isCapturingPreview}
-              availableSides={["front", "back", "left", "right"]}
+              availableSides={["front", "back", "right", "left"]}
               onSideChange={setActiveSide}
               hideSideSelector={isFullscreen}
               enableZoom={isFullscreen}

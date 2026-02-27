@@ -50,7 +50,7 @@ export default function Navbar() {
 
   const navLinks = [
     { name: "Shop", href: "/products", requiresAuth: false },
-    { name: "Create", href: "/configurator", requiresAuth: true },
+    { name: "Create", href: "/JeseyGen", requiresAuth: true },
   ];
 
   return (

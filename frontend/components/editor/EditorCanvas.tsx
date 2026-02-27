@@ -17,7 +17,8 @@ import {
 } from "@/types/editor";
 
 import { loadGoogleFont } from "@/utils/loadGoogleFont";
-import { PRINT_PROFILES } from "@/config/printProfiles";
+import { PRINT_PROFILES, getPrintArea } from "@/config/printProfiles";
+import { usePrintArea } from "@/hooks/usePrintArea";
 
 /* ======================================================
    TYPES
@@ -96,8 +97,8 @@ function resolveProductImage(
       (img) => img.view?.toUpperCase() === sideUpper
     );
     if (match?.image) return toFullUrl(match.image);
-    // Fallback: use sort order 0=front, 1=back, 2=left, 3=right
-    const order = ["front", "back", "left", "right"].indexOf(side);
+    // Fallback: use sort order 0=front, 1=back, 2=right, 3=left
+    const order = ["front", "back", "right", "left"].indexOf(side);
     if (order >= 0 && imagesWithView[order]?.image) {
       return toFullUrl(imagesWithView[order].image);
     }
@@ -129,7 +130,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
     duplicateLayer,
     rotateLayer,
     captureMode = false,
-    availableSides = ["front", "back", "left", "right"],
+    availableSides = ["front", "back", "right", "left"],
     onSideChange,
     hideSideSelector = false,
     enableZoom = false,
@@ -172,18 +173,31 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
   const profile =
     PRINT_PROFILES[product.type ?? "tshirt"];
 
-  const ratio = profile.printAreaRatio[side];
   const maskSrc = profile.masks[side];
 
-  const printArea = useMemo(
+  // Use dynamic print area detection when autoDetectFromMask is enabled
+  const { absoluteArea: detectedPrintArea, isLoading: isDetectingPrintArea } = usePrintArea({
+    maskUrl: maskSrc,
+    side,
+    canvasDimensions: { width: containerSize.w, height: containerSize.h },
+    autoDetect: profile.autoDetectFromMask ?? false,
+    useSideSpecificDetection: true,
+  });
+
+  // Fallback to static ratios if dynamic detection is not enabled or failed
+  const staticRatio = profile.printAreaRatio[side];
+  const staticPrintArea = useMemo(
     () => ({
-      x: containerSize.w * ratio.x,
-      y: containerSize.h * ratio.y,
-      w: containerSize.w * ratio.w,
-      h: containerSize.h * ratio.h,
+      x: containerSize.w * staticRatio.x,
+      y: containerSize.h * staticRatio.y,
+      w: containerSize.w * staticRatio.w,
+      h: containerSize.h * staticRatio.h,
     }),
-    [containerSize, ratio]
+    [containerSize, staticRatio]
   );
+
+  // Use detected area if available, otherwise fall back to static
+  const printArea = detectedPrintArea ?? staticPrintArea;
 
   /* ================= PRODUCT IMAGE ================= */
 
@@ -311,9 +325,9 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
           </div>
         )}
 
-        {/* MASK */}
+        {/* MASK - Shows product shape */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 overflow-hidden"
           style={{
             WebkitMaskImage: `url(${maskSrc})`,
             maskImage: `url(${maskSrc})`,
@@ -325,6 +339,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
             maskPosition: "center",
           }}
         >
+          {/* PRINT AREA BOUNDARY - Clips content to print area */}
           <div
             className="absolute"
             style={{
@@ -332,6 +347,9 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
               top: printArea.y,
               width: printArea.w,
               height: printArea.h,
+              outline: !captureMode ? '1px dashed rgba(99, 102, 241, 0.5)' : 'none',
+              overflow: 'hidden',
+              position: 'absolute',
             }}
           >
             {visibleLayers.map((layer: EditorLayer) => {
@@ -395,6 +413,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                     zIndex: selected
                       ? 999
                       : layer.zIndex,
+                    overflow: 'hidden',
                   }}
                   className={`${!captureMode && selected ? "shadow-lg ring-2 ring-indigo-500" : ""}`}
                 >
@@ -446,7 +465,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
                     </div>
                   )}
                   <div
-                    className="w-full h-full flex items-center justify-center"
+                    className="w-full h-full flex items-center justify-center overflow-hidden min-h-0"
                     style={{
                       transform: `rotate(${layer.rotation || 0}deg)`,
                     }}
@@ -572,6 +591,8 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
     lineHeight: layer.lineHeight ?? 1.2,
     textAlign: layer.textAlign || "center",
     whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    overflow: "hidden",
     color: layer.color,
     opacity: layer.opacity ?? 1,
     WebkitFontSmoothing: "antialiased",
@@ -738,9 +759,14 @@ function EnhancedText({ layer }: { layer: TextLayer }) {
 
   return (
     <div 
-      style={style} 
+      style={{
+        ...style,
+        maxWidth: '100%',
+        maxHeight: '100%',
+        boxSizing: 'border-box',
+      }} 
       key={`${layer.fontFamily}-${fontLoaded}`}
-      className="w-full h-full overflow-hidden p-2"
+      className="w-full h-full overflow-hidden"
     >
       {layer.text}
     </div>

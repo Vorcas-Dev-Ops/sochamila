@@ -1,7 +1,5 @@
 import app from "./app";
 import dotenv from "dotenv";
-import path from "path";
-import express from "express";
 import { initAdmin } from "./utils/initAdmin";
 
 dotenv.config();
@@ -9,14 +7,6 @@ dotenv.config();
 const PORT = process.env.PORT
   ? Number(process.env.PORT)
   : 5000;
-
-/* ======================================================
-   STATIC FILES (CRITICAL)
-====================================================== */
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "../uploads"))
-);
 
 /* ======================================================
    START SERVER

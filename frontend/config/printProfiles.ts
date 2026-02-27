@@ -37,9 +37,36 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
       front: { x: 0.24, y: 0.22, w: 0.52, h: 0.64 },
       back:  { x: 0.24, y: 0.22, w: 0.52, h: 0.64 },
 
-      /* Sleeves */
+      /* Short sleeves */
       left:  { x: 0.30, y: 0.30, w: 0.40, h: 0.40 },
       right: { x: 0.30, y: 0.30, w: 0.40, h: 0.40 },
+    },
+  },
+
+  longsleeve: {
+    id: "longsleeve",
+    label: "Long Sleeve T-Shirt",
+    sides: ["front", "back", "left", "right"],
+    canvasDimensions: { width: 800, height: 1000 },
+    minFontSize: 12,
+    maxFontSize: 120,
+    safetyMargin: 20,
+
+    masks: {
+      front: "/masks/longsleeve/front.png",
+      back: "/masks/longsleeve/back.png",
+      left: "/masks/longsleeve/left.png",
+      right: "/masks/longsleeve/right.png",
+    },
+
+    printAreaRatio: {
+      /* Main body */
+      front: { x: 0.24, y: 0.22, w: 0.52, h: 0.64 },
+      back:  { x: 0.24, y: 0.22, w: 0.52, h: 0.64 },
+
+      /* Long sleeves - extended vertical space */
+      left:  { x: 0.25, y: 0.18, w: 0.50, h: 0.65 },
+      right: { x: 0.25, y: 0.18, w: 0.50, h: 0.65 },
     },
   },
 
@@ -68,6 +95,87 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
     },
   },
 
+  shirt: {
+    id: "shirt",
+    label: "Shirt",
+    sides: ["front", "back", "left", "right"],
+    canvasDimensions: { width: 800, height: 1000 },
+    minFontSize: 12,
+    maxFontSize: 120,
+    safetyMargin: 20,
+
+    masks: {
+      front: "/masks/shirt/front.png",
+      back: "/masks/shirt/back.png",
+      left: "/masks/shirt/left.png",
+      right: "/masks/shirt/right.png",
+    },
+
+    printAreaRatio: {
+      /* Button-up shirt - slightly larger chest area */
+      front: { x: 0.22, y: 0.25, w: 0.56, h: 0.60 },
+      back:  { x: 0.22, y: 0.25, w: 0.56, h: 0.60 },
+
+      /* Long sleeves */
+      left:  { x: 0.24, y: 0.18, w: 0.52, h: 0.64 },
+      right: { x: 0.24, y: 0.18, w: 0.52, h: 0.64 },
+    },
+  },
+
+  sweatshirt: {
+    id: "sweatshirt",
+    label: "Sweatshirt",
+    sides: ["front", "back", "left", "right"],
+    canvasDimensions: { width: 800, height: 1000 },
+    minFontSize: 11,
+    maxFontSize: 115,
+    safetyMargin: 22,
+
+    masks: {
+      front: "/masks/sweatshirt/front.png",
+      back: "/masks/sweatshirt/back.png",
+      left: "/masks/sweatshirt/left.png",
+      right: "/masks/sweatshirt/right.png",
+    },
+
+    printAreaRatio: {
+      /* Sweatshirt - larger print area on chest */
+      front: { x: 0.23, y: 0.24, w: 0.54, h: 0.62 },
+      back:  { x: 0.23, y: 0.24, w: 0.54, h: 0.62 },
+
+      /* Long sleeves - similar to hoodie */
+      left:  { x: 0.23, y: 0.16, w: 0.54, h: 0.68 },
+      right: { x: 0.23, y: 0.16, w: 0.54, h: 0.68 },
+    },
+  },
+
+  jacket: {
+    id: "jacket",
+    label: "Jacket",
+    sides: ["front", "back", "left", "right"],
+    canvasDimensions: { width: 800, height: 1000 },
+    minFontSize: 10,
+    maxFontSize: 130,
+    safetyMargin: 25,
+
+    masks: {
+      front: "/masks/jacket/front.png",
+      back: "/masks/jacket/back.png",
+      left: "/masks/jacket/left.png",
+      right: "/masks/jacket/right.png",
+    },
+
+    printAreaRatio: {
+      /* Jacket - larger overall print areas */
+      front: { x: 0.20, y: 0.20, w: 0.60, h: 0.70 },
+      back:  { x: 0.20, y: 0.20, w: 0.60, h: 0.70 },
+
+      /* Long sleeves - extended */
+      left:  { x: 0.20, y: 0.12, w: 0.60, h: 0.76 },
+      right: { x: 0.20, y: 0.12, w: 0.60, h: 0.76 },
+    },
+  },
+
   hoodie: {
     id: "hoodie",
     label: "Hoodie",
@@ -88,8 +196,9 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
       front: { x: 0.26, y: 0.28, w: 0.48, h: 0.50 },
       back:  { x: 0.26, y: 0.28, w: 0.48, h: 0.50 },
 
-      left:  { x: 0.34, y: 0.34, w: 0.32, h: 0.32 },
-      right: { x: 0.34, y: 0.34, w: 0.32, h: 0.32 },
+      /* Long sleeves - extended vertical and horizontal space */
+      left:  { x: 0.22, y: 0.15, w: 0.56, h: 0.70 },
+      right: { x: 0.22, y: 0.15, w: 0.56, h: 0.70 },
     },
   },
 };

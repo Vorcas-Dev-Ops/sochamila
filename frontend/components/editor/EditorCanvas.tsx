@@ -135,6 +135,7 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
     enableZoom = false,
   }, ref) {
   const [zoom, setZoom] = useState(1);
+  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
   
   // Reset zoom when exiting fullscreen (enableZoom changes from true to false)
   useEffect(() => {
@@ -287,8 +288,9 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
         {/* Canvas Container */}
         <div
           ref={containerRef}
-          className="relative w-[280px] h-[350px] sm:w-[350px] sm:h-[440px] lg:w-[420px] lg:h-[520px] bg-white rounded-2xl shadow-xl transition-transform flex-shrink-0"
+          className="relative w-[280px] h-[350px] sm:w-[350px] sm:h-[440px] lg:w-[420px] lg:h-[520px] rounded-2xl shadow-xl transition-transform flex-shrink-0"
           style={{ 
+            backgroundColor: backgroundColor,
             transform: `scale(${zoom})`,
             transformOrigin: 'center center',
             margin: zoom > 1 ? 'auto' : undefined
@@ -479,27 +481,51 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
         </div>
       </div>
 
-      {/* Side Selector - Below Canvas */}
-      {!captureMode && onSideChange && !hideSideSelector && (
-        <div className="mt-4 flex items-center gap-2">
-          {availableSides.map((s) => (
+      {/* Background Color & Side Selector - Below Canvas */}
+      {!captureMode && !hideSideSelector && (
+        <div className="mt-4 flex items-center gap-4">
+          {/* Background Color Picker */}
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-300 shadow-sm">
+            <label className="text-xs font-medium text-gray-700 whitespace-nowrap">Canvas:</label>
+            <input
+              type="color"
+              value={backgroundColor}
+              onChange={(e) => setBackgroundColor(e.target.value)}
+              className="w-10 h-10 rounded cursor-pointer border border-gray-300"
+              title="Change canvas background color"
+            />
             <button
-              key={s}
-              onClick={() => onSideChange(s)}
-              className={`w-14 h-14 sm:w-16 sm:h-16 border-2 rounded-lg transition-all ${
-                side === s
-                  ? "border-teal-600 bg-teal-50 shadow-md"
-                  : "border-gray-300 bg-white hover:border-gray-400"
-              }`}
-              title={sideLabels[s]}
+              onClick={() => setBackgroundColor("#ffffff")}
+              className="text-xs px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition"
+              title="Reset to white"
             >
-              <span className={`text-xs font-medium capitalize ${
-                side === s ? "text-teal-700" : "text-gray-600"
-              }`}>
-                {sideLabels[s]}
-              </span>
+              Reset
             </button>
-          ))}
+          </div>
+
+          {/* Side Selector */}
+          {onSideChange && (
+            <div className="flex items-center gap-2">
+              {availableSides.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onSideChange(s)}
+                  className={`w-14 h-14 sm:w-16 sm:h-16 border-2 rounded-lg transition-all ${
+                    side === s
+                      ? "border-teal-600 bg-teal-50 shadow-md"
+                      : "border-gray-300 bg-white hover:border-gray-400"
+                  }`}
+                  title={sideLabels[s]}
+                >
+                  <span className={`text-xs font-medium capitalize ${
+                    side === s ? "text-teal-700" : "text-gray-600"
+                  }`}>
+                    {sideLabels[s]}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

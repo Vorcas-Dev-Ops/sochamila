@@ -55,16 +55,26 @@ export default function LoginPage() {
       // Set session cookie (no max-age) so middleware can read it during the session
       document.cookie = `token=${token}; path=/;`;
       
+      // Check if user came from a protected route
+      const redirectAfterLogin = sessionStorage.getItem('redirectAfterLogin');
+      
       // Redirect based on role
       if (role === "VENDOR") {
+        // Always go to vendor dashboard regardless of original destination
         router.push("/admin/vendors/dashboard");
       } else if (role === "ADMIN") {
+        // Always go to admin dashboard regardless of original destination
         router.push("/admin");
       } else if (role === "CUSTOMER") {
-        router.push("/");
+        // Always go to customer dashboard regardless of original destination
+        router.push("/dashboard");
       } else {
-        router.push("/");
+        // Default to customer dashboard
+        router.push("/dashboard");
       }
+      
+      // Clear the redirect after login storage
+      sessionStorage.removeItem('redirectAfterLogin');
     } catch (err: any) {
       if (err?.response?.status === 401) {
         setError("Invalid email or password");

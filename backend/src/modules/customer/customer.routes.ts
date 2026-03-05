@@ -6,6 +6,10 @@ import {
   getCustomerProfile,
   getCustomerOrders,
   getCustomerStats,
+  getCustomerAddresses,
+  createCustomerAddress,
+  updateCustomerAddress,
+  deleteCustomerAddress
 } from "./customer.controller";
 
 const router = Router();
@@ -64,6 +68,54 @@ router.get(
   authMiddleware,
   roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
   (req: Request, res: Response) => getCustomerStats(req, res)
+);
+
+/**
+ * GET /api/customer/addresses
+ * @description Get customer's saved addresses
+ * @requires CUSTOMER or ADMIN role
+ */
+router.get(
+  "/addresses",
+  authMiddleware,
+  roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
+  (req: Request, res: Response) => getCustomerAddresses(req, res)
+);
+
+/**
+ * POST /api/customer/addresses
+ * @description Add a new address
+ * @requires CUSTOMER or ADMIN role
+ */
+router.post(
+  "/addresses",
+  authMiddleware,
+  roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
+  (req: Request, res: Response) => createCustomerAddress(req, res)
+);
+
+/**
+ * PUT /api/customer/addresses/:id
+ * @description Update an existing address
+ * @requires CUSTOMER or ADMIN role
+ */
+router.put(
+  "/addresses/:id",
+  authMiddleware,
+  roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
+  (req: Request, res: Response) => updateCustomerAddress(req, res)
+);
+
+/**
+ * DELETE /api/customer/addresses/:id
+ * @description Delete an address
+ * @requires CUSTOMER or ADMIN role
+ */
+router.delete(
+  "/addresses/:id",
+  authMiddleware,
+  roleMiddleware([Role.CUSTOMER, Role.ADMIN]),
+  (req: Request, res: Response) => deleteCustomerAddress(req, res)
 );
 
 export default router;

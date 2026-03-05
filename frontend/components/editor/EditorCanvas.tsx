@@ -29,6 +29,7 @@ type ImageWithView = { image: string; view?: string };
 interface EditorCanvasProps {
   product: {
     type?: keyof typeof PRINT_PROFILES;
+    productType?: string;
     images: string[] | ImageWithView[];
     imagesWithView?: ImageWithView[];
   };
@@ -170,8 +171,9 @@ const EditorCanvas = React.forwardRef<HTMLDivElement, EditorCanvasProps>(
 
   /* ================= PROFILE ================= */
 
-  const profile =
-    PRINT_PROFILES[product.type ?? "tshirt"];
+  // Map productType to lowercase print profile key
+  const productTypeKey = product.productType?.toLowerCase() ?? "tshirt";
+  const profile = PRINT_PROFILES[productTypeKey];
 
   const maskSrc = profile.masks[side];
 

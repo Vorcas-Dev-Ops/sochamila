@@ -13,6 +13,7 @@ import {
   UserPlus,
   Briefcase,
   LayoutDashboard,
+  ChevronDown,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import { useCart } from "../../lib/cart";
@@ -22,6 +23,7 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { totalItems } = useCart();
 
   useEffect(() => {
@@ -84,6 +86,11 @@ export default function Navbar() {
             <Link
               key={item.name}
               href={item.requiresAuth && !isLoggedIn ? "/login" : item.href}
+              onClick={() => {
+                if (item.requiresAuth && !isLoggedIn) {
+                  sessionStorage.setItem('redirectAfterLogin', item.href);
+                }
+              }}
               className="relative font-semibold text-gray-700 transition hover:text-indigo-600
               after:absolute after:left-1/2 after:-bottom-1 after:h-[3px]
               after:w-0 after:bg-linear-to-r after:from-indigo-500 after:to-purple-500
@@ -119,13 +126,37 @@ export default function Navbar() {
             </Link>
           )}
           {isLoggedIn && (
-            <Link
-              href={getDashboardUrl()}
-              className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
-            >
-              <LayoutDashboard size={18} />
-              <span className="hidden xl:inline">Dashboard</span>
-            </Link>
+            <div className="relative">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-1 font-semibold text-gray-700 hover:text-indigo-600 transition text-sm xl:text-base"
+                aria-haspopup="true"
+                aria-expanded={dropdownOpen}
+              >
+                <LayoutDashboard size={18} />
+                <span className="hidden xl:inline">Account</span>
+                <ChevronDown size={16} className={`transform transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-2">
+                  <Link
+                    href={getDashboardUrl()}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  <Link
+                    href="/"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    Homepage
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
 
           {/* REGISTER BUTTON */}
@@ -221,8 +252,15 @@ export default function Navbar() {
               <Link
                 key={item.name}
                 href={item.requiresAuth && !isLoggedIn ? "/login" : item.href}
+                onClick={() => {
+                  if (item.requiresAuth && !isLoggedIn) {
+                    sessionStorage.setItem('redirectAfterLogin', item.href);
+                    setMobileOpen(false);
+                  } else {
+                    setMobileOpen(false);
+                  }
+                }}
                 className="block py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700 transition"
-                onClick={() => setMobileOpen(false)}
               >
                 {item.name}
               </Link>
@@ -241,13 +279,22 @@ export default function Navbar() {
                 </Link>
               )}
               {isLoggedIn && (
-                <Link
-                  href={getDashboardUrl()}
-                  className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <LayoutDashboard size={18} /> Dashboard
-                </Link>
+                <>
+                  <Link
+                    href={getDashboardUrl()}
+                    className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <LayoutDashboard size={18} /> Dashboard
+                  </Link>
+                  <Link
+                    href="/"
+                    className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-100 font-semibold text-gray-700"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <LayoutDashboard size={18} /> Homepage
+                  </Link>
+                </>
               )}
 
               <Link

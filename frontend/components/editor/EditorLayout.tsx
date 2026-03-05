@@ -23,6 +23,7 @@ import { TextOptions } from "@/types/editor-options";
 import type { ProductVariantImage } from "@/types/product";
 import { generateImage } from "@/lib/api/ai";
 import { useCart } from "@/lib/cart";
+import { PDFGenerator } from "@/lib/pdf-generator";
 
 type ToolTab = "products" | "designs" | "text" | "upload" | "ai" | "stickers";
 
@@ -49,8 +50,8 @@ export default function EditorLayout({
   product,
   variant,
 }: {
-  product: { 
-    id: string; 
+  product: {
+    id: string;
     type?: string;
     variants?: Array<{
       id: string;
@@ -76,6 +77,7 @@ export default function EditorLayout({
   const [activeToolTab, setActiveToolTab] = useState<ToolTab>("text");
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [mobilePanelTab, setMobilePanelTab] = useState<
     "text" | "image" | "graphics" | "stickers" | "ai"
   >("text");
@@ -94,18 +96,18 @@ export default function EditorLayout({
   // Extract available sizes and colors from product variants
   const { availableSizes, availableColors } = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
-      return { 
-        availableSizes: ["XS", "S", "M", "L", "XL", "XXL"], 
-        availableColors: [] 
+      return {
+        availableSizes: ["XS", "S", "M", "L", "XL", "XXL"],
+        availableColors: []
       };
     }
-    
+
     const sizes = [...new Set(product.variants.map(v => v.size))].sort();
-    const colors = [...new Map(product.variants.map(v => [v.color.toLowerCase(), { 
-      name: v.color, 
-      hex: getColorHex(v.color) 
+    const colors = [...new Map(product.variants.map(v => [v.color.toLowerCase(), {
+      name: v.color,
+      hex: getColorHex(v.color)
     }])).values()];
-    
+
     return { availableSizes: sizes, availableColors: colors };
   }, [product.variants]);
 
@@ -441,22 +443,7 @@ export default function EditorLayout({
 
         try {
           const element = canvasRef.current;
-          
-          // Get print area bounds before capturing
-          const printAreaEl = element.querySelector('[style*="overflow: hidden"]') as HTMLElement;
-          let clipBounds = null;
-          
-          if (printAreaEl) {
-            const rect = element.getBoundingClientRect();
-            const printRect = printAreaEl.getBoundingClientRect();
-            clipBounds = {
-              x: printRect.left - rect.left,
-              y: printRect.top - rect.top,
-              width: printRect.width,
-              height: printRect.height,
-            };
-          }
-          
+
           // Use html2canvas-pro for better rendering
           const html2canvas = (await import('html2canvas-pro')).default;
           const canvas = await html2canvas(element, {
@@ -467,43 +454,8 @@ export default function EditorLayout({
             imageTimeout: 8000,
             logging: false,
           });
-          
-          // If we have clip bounds, apply clipping
-          if (clipBounds) {
-            const scale = 2;
-            const clipX = clipBounds.x * scale;
-            const clipY = clipBounds.y * scale;
-            const clipW = clipBounds.width * scale;
-            const clipH = clipBounds.height * scale;
-            
-            // Create final canvas
-            const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = canvas.width;
-            finalCanvas.height = canvas.height;
-            const finalCtx = finalCanvas.getContext('2d');
-            
-            if (finalCtx) {
-              // Fill with white background
-              finalCtx.fillStyle = '#ffffff';
-              finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-              
-              // Create a clipping path for the print area
-              finalCtx.save();
-              finalCtx.beginPath();
-              finalCtx.rect(clipX, clipY, clipW, clipH);
-              finalCtx.clip();
-              
-              // Draw the captured canvas (only print area region will be visible due to clip)
-              finalCtx.drawImage(canvas, 0, 0);
-              
-              finalCtx.restore();
-              
-              const dataUrl = finalCanvas.toDataURL("image/png");
-              previews[side] = dataUrl;
-              continue;
-            }
-          }
-          
+
+          // Capture full canvas without clipping
           const dataUrl = canvas.toDataURL("image/png");
           previews[side] = dataUrl;
         } catch (err) {
@@ -548,7 +500,7 @@ export default function EditorLayout({
       {/* Mobile Header */}
       <div className="lg:hidden h-14 bg-white border-b flex items-center justify-between px-4 shrink-0">
         <h1 className="font-semibold text-lg">Design Studio</h1>
-        <button 
+        <button
           onClick={() => setIsToolsPanelOpen(!isToolsPanelOpen)}
           className="p-2 rounded-lg hover:bg-gray-100"
         >
@@ -560,9 +512,9 @@ export default function EditorLayout({
 
       {/* Icon Sidebar - Hidden on mobile, shown on lg */}
       <div className="hidden lg:block">
-        <IconSidebar 
-          activeTab={activeToolTab} 
-          onTabChange={handleToolTabChange} 
+        <IconSidebar
+          activeTab={activeToolTab}
+          onTabChange={handleToolTabChange}
         />
       </div>
 
@@ -570,7 +522,7 @@ export default function EditorLayout({
       {isToolsPanelOpen && (
         <>
           {/* Backdrop */}
-          <div 
+          <div
             className="lg:hidden fixed inset-0 bg-black/50 z-40"
             onClick={() => setIsToolsPanelOpen(false)}
           />
@@ -579,7 +531,7 @@ export default function EditorLayout({
           <div className="lg:hidden fixed inset-y-0 left-0 w-[320px] max-w-full bg-white z-50 shadow-xl flex flex-col">
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-semibold text-base">Tools</h2>
-              <button 
+              <button
                 onClick={() => setIsToolsPanelOpen(false)}
                 className="p-2 rounded-lg hover:bg-gray-100"
                 aria-label="Close tools"
@@ -598,9 +550,8 @@ export default function EditorLayout({
                   onClick={() => {
                     setMobilePanelTab(tab);
                   }}
-                  className={`py-2 px-1 rounded-lg text-xs font-medium capitalize text-center ${
-                    mobilePanelTab === tab ? "bg-indigo-100 text-indigo-700" : "bg-gray-50 text-gray-700"
-                  }`}
+                  className={`py-2 px-1 rounded-lg text-xs font-medium capitalize text-center ${mobilePanelTab === tab ? "bg-indigo-100 text-indigo-700" : "bg-gray-50 text-gray-700"
+                    }`}
                 >
                   {tab}
                 </button>
@@ -653,7 +604,7 @@ export default function EditorLayout({
         {/* Top Bar - Hidden on mobile, also hidden in fullscreen */}
         <div className={`hidden lg:flex h-14 bg-white border-b items-center justify-end px-4 shrink-0 ${isFullscreen ? 'lg:hidden' : ''}`}>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={async () => {
                 if (canvasRef.current) {
                   try {
@@ -686,7 +637,7 @@ export default function EditorLayout({
               </svg>
               <span className="text-sm">Share</span>
             </button>
-            <button 
+            <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="flex items-center gap-1.5 text-gray-600 hover:text-gray-900"
             >
@@ -709,7 +660,7 @@ export default function EditorLayout({
               Exit Fullscreen
             </button>
           )}
-          
+
           {/* Canvas - Full width on mobile, flex-1 on desktop */}
           <div className={`flex-1 flex flex-col min-h-0 ${isFullscreen ? 'h-full' : ''}`}>
             <EditorCanvas
@@ -750,30 +701,83 @@ export default function EditorLayout({
                 availableSizes={availableSizes}
                 availableColors={availableColors}
                 variants={product.variants}
-                onAddToCart={(variantId, productName, selectedSize, selectedColor, price) => {
+                isGenerating={isGeneratingPdf}
+                onAddToCart={async (variantId, productName, selectedSize, selectedColor, price) => {
                   // Find the variant details
                   const selectedVariant = product.variants?.find(v => v.id === variantId);
-                                
+
                   if (!selectedVariant) {
                     alert("Error: Variant not found");
                     return;
                   }
-                                
-                  // Add to cart
-                  addToCart({
-                    productId: product.id,
-                    variantId: variantId,
-                    quantity: 1,
-                    price: price,
-                    name: productName,
-                    size: selectedSize,
-                    color: selectedColor,
-                    imageUrl: variant.images?.[0]?.image || "/placeholder.png",
-                  });
-                                
-                  alert(`${productName} (${selectedSize}, ${selectedColor}) added to cart!`);
-                  // Redirect to checkout page
-                  window.location.href = "/checkout";
+
+                  setIsGeneratingPdf(true);
+                  try {
+                    // Capture preview images
+                    let previewImages = {};
+                    if (getPreviewImages) {
+                      try {
+                        previewImages = await getPreviewImages();
+                      } catch (error) {
+                        console.error("Failed to capture preview images:", error);
+                      }
+                    }
+
+                    // Get design elements (this would come from your editor state)
+                    const designElements: Array<{ type: string, content: string }> = [];
+
+                    // Get sticker and graphic URLs (this would come from your editor state)
+                    const stickerUrls: string[] = [];
+                    const graphicUrls: string[] = [];
+
+                    // Get AI generated images (this would come from your AI generation)
+                    const aiGeneratedImages: string[] = [];
+
+                    // Generate PDF preview
+                    let pdfUrl = "";
+                    try {
+                      console.log("Generating PDF preview...");
+                      const pdfBlob = await PDFGenerator.generatePreviewMockup({
+                        productId: product.id,
+                        productName: productName,
+                        frontName: designElements.find((e: any) => e.type === 'text')?.content,
+                        elements: designElements,
+                        previewImages: previewImages,
+                        stickerUrls: stickerUrls,
+                        graphicUrls: graphicUrls
+                      });
+
+                      // Upload the PDF blob to get the URL
+                      pdfUrl = await PDFGenerator.uploadPdf(pdfBlob, `mockup-${product.id}-${Date.now()}.pdf`);
+                      console.log("Uploaded PDF successfully:", pdfUrl);
+                    } catch (error) {
+                      console.error("Failed to generate PDF:", error);
+                      alert(`Error generating or uploading PDF mockup: ${error instanceof Error ? error.message : String(error)}`);
+                    }
+
+                    // Add to cart with all design information
+                    addToCart({
+                      productId: product.id,
+                      variantId: variantId,
+                      quantity: 1,
+                      price: price,
+                      name: productName,
+                      size: selectedSize,
+                      color: selectedColor,
+                      imageUrl: selectedVariant.images?.[0]?.image || "/placeholder.png",
+                      frontName: designElements.find(e => e.type === 'text')?.content,
+                      stickerUrls: stickerUrls,
+                      graphicUrls: graphicUrls,
+                      aiGeneratedImages: aiGeneratedImages,
+                      pdfUrl: pdfUrl,
+                      mockupImages: previewImages,
+                    });
+
+                    // Redirect to checkout page
+                    window.location.href = "/checkout";
+                  } finally {
+                    setIsGeneratingPdf(false);
+                  }
                 }}
               />
             </div>

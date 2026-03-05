@@ -114,10 +114,21 @@ export default function AdminDashboardPage() {
               flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600
               text-sm font-medium hover:bg-indigo-50 transition
             "
-            title="Switch to customer dashboard to place orders"
+            title="Switch to customer dashboard"
           >
             <ShoppingBag size={16} />
-            Customer Dashboard
+            Super Admin Dashboard
+          </Link>
+          <Link
+            href="/"
+            className="
+              flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-600 text-gray-600
+              text-sm font-medium hover:bg-gray-50 transition
+            "
+            title="Go to homepage"
+          >
+            <ShoppingBag size={16} />
+            Homepage
           </Link>
           <button
             onClick={loadData}

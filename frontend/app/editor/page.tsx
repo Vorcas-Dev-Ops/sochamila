@@ -75,6 +75,7 @@ export default function EditorPage() {
   const defaultProduct = {
     id: "ai-design",
     type: "tshirt",
+    productType: "TSHIRT",
   };
 
   const defaultVariant = {

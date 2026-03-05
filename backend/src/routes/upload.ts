@@ -1,17 +1,33 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
-import { imagekit } from "../lib/imagekit";
+import path from "path";
+import fs from "fs";
 
 const router = Router();
 
 /* =====================================================
-   MULTER CONFIG (MEMORY)
+   MULTER CONFIG (DISK STORAGE)
 ===================================================== */
 
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 20 * 1024 * 1024, // 20MB (PDFs can be large)
   },
 });
 
@@ -19,7 +35,7 @@ const upload = multer({
    GET /api/uploads (Health Check)
 ===================================================== */
 
-router.get("/", (req: Request, res: Response) => {
+router.get("/", (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "Upload endpoint is ready",
@@ -36,36 +52,29 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       console.log("[UPLOAD] File upload request received");
-      console.log("[UPLOAD] File:", req.file ? { name: req.file.originalname, size: req.file.size } : "None");
+      console.log("[UPLOAD] File:", req.file
+        ? { name: req.file.originalname, size: req.file.size, saved: req.file.filename }
+        : "None"
+      );
 
       if (!req.file) {
-        console.log("[UPLOAD] No file provided");
         return res.status(400).json({
           success: false,
           message: "No file uploaded",
         });
       }
 
-      console.log("[UPLOAD] Starting ImageKit upload...");
-      
-      /* 🔥 ImageKit REQUIRES base64 string */
-      const result = await imagekit.upload({
-        file: req.file.buffer.toString("base64"),
-        fileName: req.file.originalname,
-        folder: "/sochamila/uploads",
-        useUniqueFileName: true,
-      });
-
-      console.log("[UPLOAD] ImageKit upload successful:", result.url);
+      // Serve the file via the static /uploads route in Express
+      const fileUrl = `http://localhost:5000/uploads/${req.file.filename}`;
+      console.log("[UPLOAD] File saved locally at:", fileUrl);
 
       return res.status(200).json({
         success: true,
-        url: result.url,
-        fileId: result.fileId,
+        url: fileUrl,
+        filename: req.file.filename,
       });
     } catch (err) {
-      console.error("[UPLOAD] ImageKit upload error:", err);
-
+      console.error("[UPLOAD] Upload error:", err);
       return res.status(500).json({
         success: false,
         message: "Upload failed: " + (err instanceof Error ? err.message : String(err)),

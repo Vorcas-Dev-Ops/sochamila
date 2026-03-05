@@ -16,6 +16,7 @@ import {
   CheckCircle,
   XCircle,
   X,
+  Clock,
 } from "lucide-react";
 
 /* ================= TYPES ================= */
@@ -193,8 +194,20 @@ export default function AdminLayout({
   }
 
   /* ================= VENDOR ROUTE PASS-THROUGH ================= */
-  /* If vendor route, skip admin layout - vendor layout handles its own rendering */
-  if (pathname.startsWith("/admin/vendors")) {
+  /* If vendor route accessed by VENDOR user, skip admin layout - vendor layout handles its own rendering */
+  const token = sessionStorage.getItem("token");
+  let isAdmin = false;
+    
+  if (token) {
+    try {
+      const decoded = jwtDecode<JwtPayload>(token);
+      isAdmin = decoded.role === "ADMIN";
+    } catch (error) {
+      console.error("[ADMIN] Failed to decode token for role check:", error);
+    }
+  }
+    
+  if (pathname.startsWith("/admin/vendors") && !isAdmin) {
     return <>{children}</>;
   }
 
@@ -245,8 +258,11 @@ export default function AdminLayout({
           </Section>
 
           <Section title="Management">
-            <NavLink href="/admin/vendors" active={pathname.startsWith("/admin/vendors")} icon={<Users size={18} />}>
-              Vendors
+            <NavLink href="/admin/vendors" active={pathname === "/admin/vendors" || (pathname.startsWith("/admin/vendors/") && !pathname.includes("/admin/vendors/dashboard"))} icon={<Users size={18} />}>
+              All Vendors
+            </NavLink>
+            <NavLink href="/admin/vendors/pending-list" active={pathname === "/admin/vendors/pending-list"} icon={<Clock size={18} />}>
+              Pending Vendors
             </NavLink>
             <NavLink href="/admin/orders" active={pathname.startsWith("/admin/orders")} icon={<ShoppingBag size={18} />}>
               Orders

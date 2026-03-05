@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/axios";
 import { 
@@ -46,10 +46,17 @@ interface VendorWithStats extends Vendor {
 
 export default function AdminVendorsList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Initialize filterStatus based on URL parameter
+  const initialStatus = searchParams.get('status');
   const [vendors, setVendors] = useState<VendorWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [vendorStats, setVendorStats] = useState<Record<string, VendorStats>>({});
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>
+    (initialStatus === 'PENDING' || initialStatus === 'APPROVED' || initialStatus === 'REJECTED' ? initialStatus : 'ALL');
+  
   const loadVendors = async () => {
     try {
       setLoading(true);
@@ -125,9 +132,6 @@ export default function AdminVendorsList() {
     }
   };
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
-
   if (loading) return (
     <div className="p-8">
       <div className="animate-pulse space-y-6">
@@ -153,7 +157,15 @@ export default function AdminVendorsList() {
 
   // Filter vendors based on search and status
   const filterVendors = (vendorList: VendorWithStats[]) => {
-    return vendorList.filter(v => 
+    let filtered = vendorList;
+    
+    // Apply status filter
+    if (filterStatus !== 'ALL') {
+      filtered = filtered.filter(v => v.kycStatus === filterStatus || (filterStatus === 'PENDING' && (!v.kycStatus || v.kycStatus === 'PENDING')));
+    }
+    
+    // Apply search filter
+    return filtered.filter(v => 
       v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       v.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -249,7 +261,15 @@ export default function AdminVendorsList() {
           {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((status) => (
             <button
               key={status}
-              onClick={() => setFilterStatus(status)}
+              onClick={() => {
+                setFilterStatus(status);
+                // Update URL to reflect the filter
+                if (status === 'ALL') {
+                  router.push('/admin/vendors', { scroll: false });
+                } else {
+                  router.push(`/admin/vendors?status=${status}`, { scroll: false });
+                }
+              }}
               className={`px-4 py-2 rounded-xl font-medium text-sm transition ${
                 filterStatus === status
                   ? 'bg-indigo-600 text-white'

@@ -132,3 +132,94 @@ export async function updateCustomerProfileService(customerId: string, patch: { 
   const avatar = getAvatar(customerId);
   return { ...updated, avatarUrl: avatar ?? null };
 }
+
+/**
+ * Get customer addresses
+ */
+export async function getCustomerAddressesService(customerId: string) {
+  return prisma.address.findMany({
+    where: { userId: customerId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Create customer address
+ */
+export async function createCustomerAddressService(customerId: string, data: any) {
+  // If this is set to default, unset other defaults
+  if (data.isDefault) {
+    await prisma.address.updateMany({
+      where: { userId: customerId, isDefault: true },
+      data: { isDefault: false },
+    });
+  }
+
+  return prisma.address.create({
+    data: {
+      userId: customerId,
+      name: data.name,
+      phone: data.phone || null,
+      street: data.street,
+      city: data.city,
+      state: data.state,
+      zipCode: data.zipCode,
+      country: data.country || "India",
+      isDefault: data.isDefault || false,
+    },
+  });
+}
+
+/**
+ * Update customer address
+ */
+export async function updateCustomerAddressService(customerId: string, addressId: string, data: any) {
+  // Ensure address belongs to user
+  const address = await prisma.address.findFirst({
+    where: { id: addressId, userId: customerId },
+  });
+
+  if (!address) {
+    throw new Error("Address not found or unauthorized");
+  }
+
+  // If this is set to default, unset other defaults
+  if (data.isDefault) {
+    await prisma.address.updateMany({
+      where: { userId: customerId, isDefault: true, id: { not: addressId } },
+      data: { isDefault: false },
+    });
+  }
+
+  return prisma.address.update({
+    where: { id: addressId },
+    data: {
+      name: data.name,
+      phone: data.phone || null,
+      street: data.street,
+      city: data.city,
+      state: data.state,
+      zipCode: data.zipCode,
+      country: data.country || "India",
+      isDefault: data.isDefault,
+    },
+  });
+}
+
+/**
+ * Delete customer address
+ */
+export async function deleteCustomerAddressService(customerId: string, addressId: string) {
+  // Ensure address belongs to user
+  const address = await prisma.address.findFirst({
+    where: { id: addressId, userId: customerId },
+  });
+
+  if (!address) {
+    throw new Error("Address not found or unauthorized");
+  }
+
+  return prisma.address.delete({
+    where: { id: addressId },
+  });
+}

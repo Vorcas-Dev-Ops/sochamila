@@ -12,6 +12,12 @@ export interface CartItem {
   size: string;
   color: string;
   imageUrl?: string;
+  frontName?: string;
+  stickerUrls?: string[];
+  graphicUrls?: string[];
+  aiGeneratedImages?: string[];
+  pdfUrl?: string;
+  mockupImages?: Record<string, string>;
 }
 
 interface CartContextType {
@@ -124,12 +130,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems(currentItems => {
       const existingItem = currentItems.find(
         item => item.productId === newItem.productId &&
-                item.variantId === newItem.variantId
+          item.variantId === newItem.variantId
       );
 
+      let newItems: CartItem[];
       if (existingItem) {
         // Update quantity if item already exists
-        return currentItems.map(item =>
+        newItems = currentItems.map(item =>
           item.id === existingItem.id
             ? { ...item, quantity: item.quantity + newItem.quantity }
             : item
@@ -141,8 +148,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
           id: `${newItem.productId}-${newItem.variantId}-${Date.now()}`,
           imageUrl: fixImageUrl(newItem.imageUrl)
         };
-        return [...currentItems, item];
+        newItems = [...currentItems, item];
       }
+
+      // Save synchronously so pdfUrl isn't lost when navigating immediately
+      try {
+        localStorage.setItem(cartKey, JSON.stringify(newItems));
+      } catch (e) {
+        console.error('Failed to sync cart to localStorage:', e);
+      }
+
+      return newItems;
     });
   };
 

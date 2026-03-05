@@ -9,7 +9,7 @@ export async function placeOrder(req: Request, res: Response) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // items: [{ sizeId, quantity, price, mockupUrl?, imageUrl?, pdfUrl? }]
+    // items: [{ sizeId, quantity, price, mockupUrl?, imageUrl?, pdfUrl?, frontName?, stickerUrls?, graphicUrls?, aiGeneratedImages?, mockupImages? }]
     const order = await prisma.order.create({
       data: {
         userId,
@@ -23,6 +23,11 @@ export async function placeOrder(req: Request, res: Response) {
             ...(it.mockupUrl ? { mockupUrl: it.mockupUrl } : {}),
             ...(it.imageUrl ? { imageUrl: it.imageUrl } : {}),
             ...(it.pdfUrl ? { pdfUrl: it.pdfUrl } : {}),
+            ...(it.frontName ? { frontName: it.frontName } : {}),
+            ...(it.stickerUrls ? { stickerUrls: it.stickerUrls } : {}),
+            ...(it.graphicUrls ? { graphicUrls: it.graphicUrls } : {}),
+            ...(it.aiGeneratedImages ? { aiGeneratedImages: it.aiGeneratedImages } : {}),
+            ...(it.mockupImages ? { mockupImages: it.mockupImages } : {}),
           })),
         },
       },
@@ -42,6 +47,11 @@ export async function placeOrder(req: Request, res: Response) {
         imageUrl: item.imageUrl,
         mockupUrl: item.mockupUrl,
         pdfUrl: item.pdfUrl,
+        frontName: item.frontName,
+        stickerUrls: item.stickerUrls,
+        graphicUrls: item.graphicUrls,
+        aiGeneratedImages: item.aiGeneratedImages,
+        mockupImages: item.mockupImages,
       })),
     });
 

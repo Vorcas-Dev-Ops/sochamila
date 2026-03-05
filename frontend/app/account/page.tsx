@@ -11,9 +11,11 @@ export default function AccountPage() {
   const { user, loading } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [editingEmail, setEditingEmail] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -36,6 +38,7 @@ export default function AccountPage() {
           if (res.ok && body && body.data) {
             setName(body.data.name || user.name || "");
             setEmail(body.data.email || user.email || "");
+            setPhone(body.data.phone || "");
             setAvatarUrl(body.data.avatarUrl || null);
             return;
           }
@@ -55,10 +58,11 @@ export default function AccountPage() {
     if (!user) return setMessage("Please sign in to save your profile.");
 
     // client-side validation
-    const newErrors: { name?: string; email?: string } = {};
+    const newErrors: { name?: string; email?: string; phone?: string } = {};
     if (!name || !name.trim()) newErrors.name = "Name is required";
     const emailRegex = /\S+@\S+\.\S+/;
     if (!email || !emailRegex.test(email)) newErrors.email = "Valid email is required";
+    if (!phone || !phone.trim()) newErrors.phone = "Phone number is required";
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
       return setMessage("Please fix validation errors before saving.");
@@ -78,7 +82,7 @@ export default function AccountPage() {
       const res = await fetch(`${API_BASE}/customer/profile`, {
         method: "PUT",
         headers,
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name, email, phone }),
       });
 
       const body = await res.json().catch(() => null);
@@ -246,10 +250,34 @@ export default function AccountPage() {
                   </div>
                   {errors.email && <div className="text-sm text-red-600 mt-1">{errors.email}</div>}
                 </div>
+
+                <div>
+                  <label className="text-sm text-gray-600">Phone Number</label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <input
+                      name="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      readOnly={!editingPhone}
+                      className={`w-full border rounded px-3 py-2 ${editingPhone ? "" : "bg-gray-50 cursor-default"}`}
+                      placeholder="Enter phone number"
+                      type="tel"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setEditingPhone(true); setTimeout(() => { const el = document.querySelector('input[name="phone"]') as HTMLInputElement | null; el?.focus(); }, 0); }}
+                      aria-label="Edit phone"
+                      className="text-gray-500 hover:text-gray-700 p-1"
+                    >
+                      ✎
+                    </button>
+                  </div>
+                  {errors.phone && <div className="text-sm text-red-600 mt-1">{errors.phone}</div>}
+                </div>
               </div>
 
               {/* Show Save/Cancel only when editing */}
-              {(editingName || editingEmail) && (
+              {(editingName || editingEmail || editingPhone) && (
                 <div className="flex items-center gap-3">
                   <button
                     type="submit"
@@ -260,7 +288,7 @@ export default function AccountPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setName(user.name || ""); setEmail(user.email || ""); setEditingName(false); setEditingEmail(false); setMessage(null); setErrors({}); }}
+                    onClick={() => { setName(user.name || ""); setEmail(user.email || ""); setPhone(""); setEditingName(false); setEditingEmail(false); setEditingPhone(false); setMessage(null); setErrors({}); }}
                     className="px-4 py-2 border rounded"
                   >
                     Cancel

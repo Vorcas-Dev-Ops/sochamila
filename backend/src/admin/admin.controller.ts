@@ -74,6 +74,11 @@ export const getOrderDesigns = async (req: Request, res: Response) => {
         imageUrl: item.imageUrl,
         mockupUrl: item.mockupUrl,
         pdfUrl: item.pdfUrl,
+        frontName: item.frontName,
+        stickerUrls: item.stickerUrls,
+        graphicUrls: item.graphicUrls,
+        aiGeneratedImages: item.aiGeneratedImages,
+        mockupImages: item.mockupImages,
       },
       product: item.size.color.product,
       size: {
@@ -96,7 +101,11 @@ export const getOrderDesigns = async (req: Request, res: Response) => {
         (item: any) =>
           item.design.imageUrl ||
           item.design.mockupUrl ||
-          item.design.pdfUrl
+          item.design.pdfUrl ||
+          item.design.frontName ||
+          (item.design.stickerUrls && item.design.stickerUrls.length > 0) ||
+          (item.design.graphicUrls && item.design.graphicUrls.length > 0) ||
+          (item.design.aiGeneratedImages && item.design.aiGeneratedImages.length > 0)
       ),
     });
   } catch (error) {

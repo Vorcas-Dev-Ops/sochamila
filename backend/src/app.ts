@@ -10,6 +10,10 @@ import {
   performanceWarning,
 } from "./middlewares/logger";
 import {
+  generalRateLimiter,
+  rateLimitLogger,
+} from "./middlewares/rateLimit.middleware";
+import {
   globalErrorHandler,
   notFoundHandler,
 } from "./middlewares/errorHandler";
@@ -24,11 +28,17 @@ app.use(httpLogger);
 app.use(performanceWarning(1000)); // Warn if request takes > 1 second
 
 /* ================================
+   RATE LIMITING
+================================ */
+app.use(rateLimitLogger);
+app.use(generalRateLimiter);
+
+/* ================================
    CORS
 ================================ */
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -53,9 +63,9 @@ app.get("/test-static", (req, res) => {
   res.json({ message: "test endpoint works" });
 });
 
-app.use("/uploads", express.static(uploadsPath, { 
+app.use("/uploads", express.static(uploadsPath, {
   dotfiles: "allow",
-  cacheControl: false,  
+  cacheControl: false,
 }));
 
 /* ================================

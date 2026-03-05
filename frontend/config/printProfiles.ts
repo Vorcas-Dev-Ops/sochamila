@@ -66,12 +66,12 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
 
     printAreaRatio: {
       /* Main body - centered, conservative */
-      front: { x: 0.28, y: 0.25, w: 0.44, h: 0.55 },
+      front: { x: 0.36, y: 0.20, w: 0.44, h: 0.58 },
       back:  { x: 0.28, y: 0.25, w: 0.44, h: 0.55 },
 
       /* Long sleeves - narrower to fit sleeve width */
-      left:  { x: 0.32, y: 0.20, w: 0.36, h: 0.58 },
-      right: { x: 0.32, y: 0.20, w: 0.36, h: 0.58 },
+      left:  { x: 0.12, y: 0.29, w: 0.36, h: 0.58 },
+      right: { x: 0.1, y: 0.20, w: 0.34, h: 0.58 },
     },
   },
 
@@ -150,12 +150,12 @@ export const PRINT_PROFILES: Record<string, PrintProfile> = {
 
     printAreaRatio: {
       /* Sweatshirt - centered, well within boundaries */
-      front: { x: 0.28, y: 0.26, w: 0.44, h: 0.52 },
-      back:  { x: 0.28, y: 0.26, w: 0.44, h: 0.52 },
+      front: { x: 0.20, y: 0.60, w: 0.44, h: 0.59 },
+      back:  { x: 0.28, y: 0.6, w: 0.44, h: 0.52 },
 
       /* Long sleeves - extended length for sweatshirt (fallback values) */
       left:  { x: 0.36, y: 0.18, w: 0.28, h: 0.62 },
-      right: { x: 0.36, y: 0.18, w: 0.28, h: 0.62 },
+      right: { x: 0.11, y: 0.12, w: 0.28, h: 0.69 },
     },
   },
 
